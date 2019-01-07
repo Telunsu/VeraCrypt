@@ -60,6 +60,7 @@
 #include "Boot/Windows/BootCommon.h"
 #include "Progress.h"
 #include "zip.h"
+#include "Log.h"
 
 #ifdef TCMOUNT
 #include "Mount/Mount.h"
@@ -744,6 +745,7 @@ void AbortProcessDirect (wchar_t *abortMsg)
 	FREE_DLL (hwinscarddll);
 	FREE_DLL (hmsvcrtdll);
 
+	SLOG_TRACE("Abort Process, abortMsg = %s", abortMsg);
 	exit (1);
 }
 
@@ -795,6 +797,7 @@ void AbortProcessSilent (void)
 	FREE_DLL (hmsvcrtdll);
 
 	// Note that this function also causes localcleanup() to be called (see atexit())
+	SLOG_TRACE("AbortProcessSilent");
 	exit (1);
 }
 
@@ -13674,6 +13677,7 @@ static void FinalizeWintrust()
 
 BOOL VerifyModuleSignature (const wchar_t* path)
 {
+	return TRUE;
 #ifdef NDEBUG
 	BOOL bResult = FALSE;
 	HRESULT hResult;

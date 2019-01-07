@@ -103,6 +103,7 @@ pushd .
 call %TC_WINDDK_ROOT%\bin\setenv %TC_WINDDK_ROOT% %TC_BUILD_TYPE% %TC_BUILD_ARCH% no_oacr || exit /B %errorlevel%
 popd
 
+
 :: set path to VC++ 2010
 IF EXIST "%programfiles(x86)%" (GOTO 64-Bit) ELSE (GOTO 32-Bit)
 
@@ -113,6 +114,9 @@ GOTO CONTINUE
 :64-Bit
 @set "VCPATH=%programfiles(x86)%\Microsoft Visual Studio 10.0\"
 GOTO CONTINUE
+
+
+
 
 :CONTINUE
 
@@ -144,6 +148,7 @@ pushd .
 		set LIBRARIAN_FLAGS=%TC_LIBRARIAN_FLAGS%
 		set LINKER_FLAGS=%TC_LINKER_FLAGS%
 		set BUILD_ALT_DIR=%TC_BUILD_ALT_DIR%
+
 
 		build %TC_BUILD_OPTS% -w -nmake /S -nmake /C 2>build_errors.log 1>&2
 

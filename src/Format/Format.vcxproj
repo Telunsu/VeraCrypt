@@ -189,7 +189,7 @@ copy $(TargetPath) "..\Debug\Setup Files\VeraCrypt Format-x64.exe" &gt;NUL:
       <DisableSpecificWarnings>4057;4100;4127;4201;4204;4701;4706;4131;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>..\Crypto\Release\crypto.lib;..\Common\Release\Zip.lib;mpr.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\Crypto\Release\crypto.lib;..\Common\Release\Zip.lib;mpr.lib;DbgHelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)VeraCryptFormat.exe</OutputFile>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <DelayLoadDLLs>mpr.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
@@ -254,6 +254,7 @@ copy $(TargetPath) "..\Debug\Setup Files\VeraCrypt Format-x64.exe" &gt;NUL:
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Common\Log.c" />
     <ClCompile Include="FormatCom.cpp" />
     <ClCompile Include="InPlace.c">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsCpp</CompileAs>
@@ -324,6 +325,7 @@ copy $(TargetPath) "..\Debug\Setup Files\VeraCrypt Format-x64.exe" &gt;NUL:
     <ClInclude Include="..\Common\Exception.h" />
     <ClInclude Include="..\Common\Fat.h" />
     <ClInclude Include="..\Common\Format.h" />
+    <ClInclude Include="..\Common\Log.h" />
     <ClInclude Include="FormatCom.h" />
     <ClInclude Include="..\Common\GfMul.h" />
     <ClInclude Include="InPlace.h" />

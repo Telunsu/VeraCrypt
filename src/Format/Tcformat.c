@@ -53,6 +53,7 @@
 #include "Xml.h"
 #include "SecurityToken.h"
 
+#include "Log.h"
 #include <Strsafe.h>
 
 using namespace VeraCrypt;
@@ -6039,16 +6040,22 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 	int nNewPageNo = nCurPageNo;
 
+	init_logger("D:\\vera_crypt\\", S_TRACE);
+
+	SLOG_TRACE("uMsg = %d", uMsg);
 	switch (uMsg)
 	{
 	case WM_INITDIALOG:
 		{
+	        SLOG_TRACE("uMsg case is WM_INITDIALOG");
 			MainDlg = hwndDlg;
 			InitDialog (hwndDlg);
 			LocalizeDialog (hwndDlg, "IDD_VOL_CREATION_WIZARD_DLG");
 
-			if (IsTrueCryptInstallerRunning())
+			if (IsTrueCryptInstallerRunning()) {
+	            SLOG_TRACE("IsTrueCryptInstallerRunning return true, abort it.");
 				AbortProcess ("TC_INSTALLER_IS_RUNNING");
+			}
 
 			// Resize the bitmap if the user has a non-default DPI
 			if (ScreenDPI != USER_DEFAULT_SCREEN_DPI)
@@ -6099,13 +6106,17 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 			ExtractCommandLine (hwndDlg, (wchar_t *) lParam);
 
+	        SLOG_TRACE("ExtractCommandLine over");
+
 			if (ComServerMode)
 			{
 				InitDialog (hwndDlg);
 
 				if (!ComServerFormat ())
 				{
-					handleWin32Error (hwndDlg, SRC_POS);
+					DWORD dwError = handleWin32Error (hwndDlg, SRC_POS);
+	                SLOG_TRACE("ComServerMode, handleWin32Error %d", dwError);
+
 					exit (1);
 				}
 				exit (0);
@@ -6113,6 +6124,8 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 			if (DirectCreationMode)
 			{
+	            SLOG_TRACE("DirectCreationMode");
+				
 				wchar_t root[TC_MAX_PATH];
 				DWORD fileSystemFlags = 0;
 				uint64 dataAreaSize;
@@ -6122,13 +6135,18 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				showKeys = FALSE;
 				bGuiMode = FALSE;
 
-				if (CmdVolumePassword.Length == 0)
+				if (CmdVolumePassword.Length == 0) {
 					AbortProcess ("ERR_PASSWORD_MISSING");
+				}
 
 				if (CmdVolumeFileSize == 0)
 					AbortProcess ("ERR_SIZE_MISSING");
 
+	            SLOG_TRACE("CreateFullVolumePath start, szDiskFile = %s, szFileName = %s", szDiskFile, szFileName);
+
 				CreateFullVolumePath (szDiskFile, sizeof(szDiskFile), szFileName, &bDevice);
+
+	            SLOG_TRACE("CreateFullVolumePath over, szDiskFile = %s, szFileName = %s", szDiskFile, szFileName);
 
 				if (bDevice)
 					AbortProcess ("ERR_DEVICE_CLI_CREATE_NOT_SUPPORTED");
@@ -6175,7 +6193,8 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 				if (!GetVolumePathName (szFileName, root, array_capacity (root)))
 				{
-					handleWin32Error (hwndDlg, SRC_POS);
+					DWORD err = handleWin32Error (hwndDlg, SRC_POS);
+	                SLOG_TRACE("handleWin32Error, err = %d", err);
 					exit (1);
 				}
 
@@ -6205,9 +6224,11 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 					}
 					else
 					{
-						handleWin32Error (hwndDlg, SRC_POS);
+						DWORD err = handleWin32Error (hwndDlg, SRC_POS);
+	                    SLOG_TRACE("handleWin32Error, err = %d", err);
 					}
 
+	                SLOG_TRACE("GetDiskFreeSpaceEx failed");
 					exit (1);
 				}
 				else
@@ -6272,12 +6293,14 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 					// Check password length (check also done for outer volume which is not the case in TrueCrypt).
 					if (!CheckPasswordLength (NULL, volumePassword.Length, volumePim, FALSE, 0, Silent, Silent))
 					{
+	                    SLOG_TRACE("CheckPasswordLength failed");
 						exit (1);
 					}
 				}
 
 				volTransformThreadFunction (hwndDlg);
 
+	            SLOG_TRACE("bOperationSuccess = %s", (bOperationSuccess ? "true" : "false"));
 				exit (bOperationSuccess? 0 : 1);
 			}
 
@@ -8909,6 +8932,15 @@ void ExtractCommandLine (HWND hwndDlg, wchar_t *lpszCommandLine)
 		return;
 	}
 
+	{
+		FILE *fp = NULL;
+ 
+		fp = fopen("D:\\vera_crypt\\1111\\out.log", "w+");
+		fprintf(fp, "This is testing for fprintf...\n");
+		fputs("This is testing for fputs...\n", fp);
+		fclose(fp);
+	}
+	
 	/* Extract command line arguments */
 	nNoCommandLineArgs = Win32CommandLine (&lpszCommandLineArgs);
 	if (nNoCommandLineArgs > 0)
@@ -8916,7 +8948,7 @@ void ExtractCommandLine (HWND hwndDlg, wchar_t *lpszCommandLine)
 		int i;
 
 		for (i = 0; i < nNoCommandLineArgs; i++)
-		{
+		{ 
 			enum
 			{
 				OptionHistory,

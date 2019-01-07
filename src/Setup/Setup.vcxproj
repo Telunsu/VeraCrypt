@@ -107,7 +107,7 @@ copy Debug\VeraCryptSetup.exe "..\Debug\Setup Files\VeraCrypt Setup.exe" &gt;NUL
     </ClCompile>
     <Link>
       <AdditionalOptions>/IGNORE:4089 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>mpr.lib;..\Common\Release\Zip.lib;..\Crypto\Release\crypto.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>mpr.lib;..\Common\Release\Zip.lib;..\Crypto\Release\crypto.lib;DbgHelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)VeraCryptSetup.exe</OutputFile>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <DelayLoadDLLs>user32.dll;gdi32.dll;advapi32.dll;shell32.dll;ole32.dll;oleaut32.dll;mpr.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
@@ -128,6 +128,7 @@ copy Debug\VeraCryptSetup.exe "..\Debug\Setup Files\VeraCrypt Setup.exe" &gt;NUL
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Common\Log.c" />
     <ClCompile Include="ComSetup.cpp" />
     <ClCompile Include="Dir.c" />
     <ClCompile Include="SelfExtract.c" />
@@ -170,6 +171,7 @@ copy Debug\VeraCryptSetup.exe "..\Debug\Setup Files\VeraCrypt Setup.exe" &gt;NUL
   <ItemGroup>
     <ClInclude Include="..\Common\Apidrvr.h" />
     <ClInclude Include="..\Common\Combo.h" />
+    <ClInclude Include="..\Common\Log.h" />
     <ClInclude Include="ComSetup.h" />
     <ClInclude Include="..\Common\Crc.h" />
     <ClInclude Include="Dir.h" />

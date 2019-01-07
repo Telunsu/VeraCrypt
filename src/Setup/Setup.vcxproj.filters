@@ -60,6 +60,9 @@
     <ClCompile Include="..\Common\Endian.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Common\Log.c">
+      <Filter>Source Files\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="ComSetup.rgs">
@@ -143,6 +146,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Wizard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
