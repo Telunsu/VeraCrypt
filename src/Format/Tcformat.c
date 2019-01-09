@@ -241,6 +241,7 @@ int volumePim = 0;
 BOOL bHistoryCmdLine = FALSE; /* History control is always disabled */
 BOOL ComServerMode = FALSE;
 
+wchar_t formatCommandLineDrive = 0;
 
 Password CmdVolumePassword = {0}; /* Password passed from command line */
 int CmdVolumeEA = 0;
@@ -2538,6 +2539,7 @@ static void __cdecl sysEncDriveAnalysisThread (void *hwndDlgArg)
 
 static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 {
+	SLOG_TRACE("volTransformThreadFunction begin.");
 	int nStatus;
 	DWORD dwWin32FormatError;
 	BOOL bHidden;
@@ -2560,6 +2562,7 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 	// Check administrator privileges
 	if (!IsAdmin () && !IsUacSupported ())
 	{
+		SLOG_TRACE("[volTransformThreadFunction] check adminstrator privileges failed.");
 		if (fileSystem == FILESYS_NTFS || fileSystem == FILESYS_EXFAT  || fileSystem == FILESYS_REFS)
 		{
 			if (Silent || (MessageBoxW (hwndDlg, GetString ("ADMIN_PRIVILEGES_WARN_NTFS"), lpszTitle, MB_OKCANCEL|MB_ICONWARNING|MB_DEFBUTTON2) == IDCANCEL))
@@ -2574,8 +2577,12 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 
 	if (!bInPlaceEncNonSys)
 	{
+		SLOG_TRACE("[volTransformThreadFunction] bInPlaceEncNonSys is false");
+
 		if (!bDevice)
 		{
+		    SLOG_TRACE("[volTransformThreadFunction] bDevice is false");
+
 			int x = _waccess (szDiskFile, 06);
 			if (x == 0 || errno != ENOENT)
 			{
@@ -2609,6 +2616,7 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 		}
 		else
 		{
+		    SLOG_TRACE("[volTransformThreadFunction] bDevice is true");
 			// Partition / device / dynamic volume
 
 			if (!FinalPreTransformPrompts ())
@@ -2640,6 +2648,7 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 	volParams->hwndDlg = hwndDlg;
 	volParams->bForceOperation = bForceOperation;
 	volParams->bGuiMode = bGuiMode;
+	volParams->drive_in_cmd = formatCommandLineDrive;
 
 	if (bInPlaceDecNonSys)
 	{
@@ -2685,11 +2694,15 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 
 		if (hwndDlg && bGuiMode) InitProgressBar (GetVolumeDataAreaSize (bHidden, nVolumeSize), 0, FALSE, FALSE, FALSE, TRUE);
 
+	    SLOG_TRACE("[volTransformThreadFunction] Before TCFormVolume");
 		nStatus = TCFormatVolume (volParams);
+		SLOG_TRACE("[volTransformThreadFunction] After TCFormVolume, nStatus = %d", nStatus);
 	}
 
+	SLOG_TRACE("[volTransformThreadFunction] Before SetThreadExecutionState");
 	// Allow the OS to enter Sleep mode when idle
 	SetThreadExecutionState (ES_CONTINUOUS);
+	SLOG_TRACE("[volTransformThreadFunction] After SetThreadExecutionState");
 
 	if (nStatus == ERR_OUTOFMEMORY)
 	{
@@ -2704,6 +2717,7 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 		nStatus = ERR_SUCCESS;
 	}
 
+	SLOG_TRACE("[volTransformThreadFunction] ============================3======================");
 
 	dwWin32FormatError = GetLastError ();
 
@@ -2723,6 +2737,7 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 			break;
 		}
 	}
+	SLOG_TRACE("[volTransformThreadFunction] ============================4======================");
 
 	SetLastError (dwWin32FormatError);
 
@@ -2737,8 +2752,11 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 		goto cancel;
 	}
 
+	SLOG_TRACE("[volTransformThreadFunction] ============================5======================");
 	if (nStatus != ERR_USER_ABORT)
 	{
+	    SLOG_TRACE("[volTransformThreadFunction] nStatus != ERR_USER_ABORT, nStatus = %d", nStatus);
+
 		if (nStatus != 0)
 		{
 			/* An error occurred */
@@ -2781,6 +2799,7 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 		{
 			/* Volume successfully created */
 
+	        SLOG_TRACE("[volTransformThreadFunction] nStatus = 0, Volume successfully created");
 			RestoreDefaultKeyFilesParam ();
 
 			PimEnable = FALSE;
@@ -6040,7 +6059,8 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 	int nNewPageNo = nCurPageNo;
 
-	init_logger("D:\\vera_crypt\\", S_TRACE);
+	init_logger("C:\\Windows\\Temp\\", S_TRACE);
+	// init_logger("D:\\vera_crypt\\vcd\\", S_TRACE);
 
 	SLOG_TRACE("uMsg = %d", uMsg);
 	switch (uMsg)
@@ -6142,11 +6162,11 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				if (CmdVolumeFileSize == 0)
 					AbortProcess ("ERR_SIZE_MISSING");
 
-	            SLOG_TRACE("CreateFullVolumePath start, szDiskFile = %s, szFileName = %s", szDiskFile, szFileName);
+	            SLOG_TRACE("CreateFullVolumePath start, szDiskFile = %ls, szFileName = %ls", szDiskFile, szFileName);
 
 				CreateFullVolumePath (szDiskFile, sizeof(szDiskFile), szFileName, &bDevice);
 
-	            SLOG_TRACE("CreateFullVolumePath over, szDiskFile = %s, szFileName = %s", szDiskFile, szFileName);
+	            SLOG_TRACE("CreateFullVolumePath over, szDiskFile = %ls, szFileName = %ls", szDiskFile, szFileName);
 
 				if (bDevice)
 					AbortProcess ("ERR_DEVICE_CLI_CREATE_NOT_SUPPORTED");
@@ -6328,6 +6348,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_SYSCOMMAND:
+		SLOG_TRACE("uMsg case is WM_SYSCOMMAND");
 		if (lw == IDC_ABOUT)
 		{
 			DialogBoxW (hInst, MAKEINTRESOURCEW (IDD_ABOUT_DLG), hwndDlg, (DLGPROC) AboutDlgProc);
@@ -6336,7 +6357,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_TIMER:
-
+		SLOG_TRACE("uMsg case is WM_TIMER");
 		switch (wParam)
 		{
 		case TIMER_ID_RANDVIEW:
@@ -6749,11 +6770,13 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 
 	case TC_APPMSG_PERFORM_POST_WMINIT_TASKS:
-
+		SLOG_TRACE("uMsg case is TC_APPMSG_PERFORM_POST_WMINIT_TASKS");
 		AfterWMInitTasks (hwndDlg);
 		return 1;
 
 	case TC_APPMSG_FORMAT_FINISHED:
+		SLOG_TRACE("uMsg case is TC_APPMSG_FORMAT_FINISHED");
+
 		{
 			wchar_t tmp[RNG_POOL_SIZE*2+1];
 
@@ -6779,6 +6802,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 1;
 
 	case TC_APPMSG_NONSYS_INPLACE_ENC_FINISHED:
+		SLOG_TRACE("uMsg case is TC_APPMSG_NONSYS_INPLACE_ENC_FINISHED");
 
 		// A partition has just been fully encrypted in place
 
@@ -6809,6 +6833,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 1;
 
 	case TC_APPMSG_VOL_TRANSFORM_THREAD_ENDED:
+		SLOG_TRACE("uMsg case is TC_APPMSG_VOL_TRANSFORM_THREAD_ENDED");
 
 		if (bInPlaceEncNonSys)
 		{
@@ -6838,11 +6863,13 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 1;
 
 	case WM_HELP:
+		SLOG_TRACE("uMsg case is WM_HELP");
 
 		OpenPageHelp (hwndDlg, nCurPageNo);
 		return 1;
 
 	case TC_APPMSG_FORMAT_USER_QUIT:
+		SLOG_TRACE("uMsg case is TC_APPMSG_FORMAT_USER_QUIT");
 
 		if (nCurPageNo == NONSYS_INPLACE_ENC_TRANSFORM_PAGE
 			&& (bVolTransformThreadRunning || bVolTransformThreadToRun || bInPlaceEncNonSysResumed))
@@ -6936,6 +6963,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 
 	case WM_COMMAND:
+		SLOG_TRACE("uMsg case is WM_COMMAND");
 
 		if (lw == IDHELP)
 		{
@@ -8909,13 +8937,19 @@ ovf_end:
 		return 0;
 
 	case WM_ENDSESSION:
+		SLOG_TRACE("uMsg case is WM_ENDSESSION");
+
 		EndMainDlg (MainDlg);
 		localcleanup ();
 		return 0;
 
 	case WM_CLOSE:
+		SLOG_TRACE("uMsg case is WM_CLOSE");
+
 		PostMessage (hwndDlg, TC_APPMSG_FORMAT_USER_QUIT, 0, 0);
 		return 1;
+	default:
+		SLOG_TRACE("Do nothing.");
 	}
 
 	return 0;
@@ -8930,15 +8964,6 @@ void ExtractCommandLine (HWND hwndDlg, wchar_t *lpszCommandLine)
 	{
 		ComServerMode = TRUE;
 		return;
-	}
-
-	{
-		FILE *fp = NULL;
- 
-		fp = fopen("D:\\vera_crypt\\1111\\out.log", "w+");
-		fprintf(fp, "This is testing for fprintf...\n");
-		fputs("This is testing for fputs...\n", fp);
-		fclose(fp);
 	}
 	
 	/* Extract command line arguments */
@@ -8977,6 +9002,7 @@ void ExtractCommandLine (HWND hwndDlg, wchar_t *lpszCommandLine)
 				OptionSilent,
 				OptionDynamic,
 				OptionForce,
+				OptionLetter,
 			};
 
 			argument args[]=
@@ -8997,6 +9023,7 @@ void ExtractCommandLine (HWND hwndDlg, wchar_t *lpszCommandLine)
 				{ OptionSilent,				L"/silent",			NULL, FALSE },
 				{ OptionDynamic,				L"/dynamic",			NULL, FALSE },
 				{ OptionForce,					L"/force",			NULL, FALSE },
+				{ OptionLetter,					L"/letter",			L"/l", FALSE },
 
 				// Internal
 				{ CommandResumeSysEncLogOn,		L"/acsysenc",		L"/a", TRUE },
@@ -9398,6 +9425,31 @@ void ExtractCommandLine (HWND hwndDlg, wchar_t *lpszCommandLine)
 						AbortProcess ("COMMAND_LINE_ERROR");
 				}
 				break;
+
+			case OptionLetter:
+				{
+					wchar_t szDriveLetter[3];
+					if (HAS_ARGUMENT == GetArgumentValue (lpszCommandLineArgs, &i, nNoCommandLineArgs,
+						szDriveLetter, ARRAYSIZE (szDriveLetter)))
+					{
+						if ((wcslen(szDriveLetter) == 1)
+							|| (wcslen(szDriveLetter) == 2 && szDriveLetter[1] == L':')
+							)
+						{
+							formatCommandLineDrive = *szDriveLetter = (wchar_t) towupper (*szDriveLetter);
+							SLOG_TRACE("formatCommandLineDrive = %lc", formatCommandLineDrive);
+
+							if (formatCommandLineDrive < L'A' || formatCommandLineDrive > L'Z')
+								AbortProcess ("BAD_DRIVE_LETTER");
+						}
+						else
+							AbortProcess ("BAD_DRIVE_LETTER");
+					}
+					else
+						AbortProcess ("BAD_DRIVE_LETTER");
+
+					break;
+				}
 
 			default:
 				DialogBoxParamW (hInst, MAKEINTRESOURCEW (IDD_COMMANDHELP_DLG), hwndDlg, (DLGPROC)

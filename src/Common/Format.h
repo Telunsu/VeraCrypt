@@ -45,6 +45,7 @@ typedef struct
 	HWND hwndDlg;
 	BOOL bForceOperation;
 	BOOL bGuiMode;
+	wchar_t drive_in_cmd;
 }
 FORMAT_VOL_PARAMETERS;
 

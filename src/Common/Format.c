@@ -33,6 +33,8 @@
 
 #include <Strsafe.h>
 
+#include "Log.h"
+
 #ifndef SRC_POS
 #define SRC_POS (__FUNCTION__ ":" TC_TO_STRING(__LINE__))
 #endif
@@ -107,6 +109,7 @@ int TCFormatVolume (volatile FORMAT_VOL_PARAMETERS *volParams)
 		|| FormatSectorSize > TC_MAX_VOLUME_SECTOR_SIZE
 		|| FormatSectorSize % ENCRYPTION_DATA_UNIT_SIZE != 0)
 	{
+		SLOG_TRACE("[TCFormatVolume] SECTOR_SIZE_UNSUPPORTED");
 		Error ("SECTOR_SIZE_UNSUPPORTED", hwndDlg);
 		return ERR_DONT_REPORT;
 	}
@@ -126,8 +129,11 @@ int TCFormatVolume (volatile FORMAT_VOL_PARAMETERS *volParams)
 	}
 	else
 	{
-		if (volParams->size <= TC_TOTAL_VOLUME_HEADERS_SIZE)
+		if (volParams->size <= TC_TOTAL_VOLUME_HEADERS_SIZE) {
+		    SLOG_TRACE("[TCFormatVolume] volParams->size <= TC_TOTAL_VOLUME_HEADERS_SIZE");
+
 			return ERR_VOL_SIZE_WRONG;
+		}
 
 		dataOffset = TC_VOLUME_DATA_OFFSET;
 	}
@@ -166,6 +172,8 @@ int TCFormatVolume (volatile FORMAT_VOL_PARAMETERS *volParams)
 	/* cryptoInfo sanity check to make Coverity happy eventhough it can't be NULL if nStatus = 0 */
 	if ((nStatus != 0) || !cryptoInfo)
 	{
+	    SLOG_TRACE("[TCFormatVolume] nStatus = %d", nStatus);
+
 		burn (header, sizeof (header));
 		VirtualUnlock (header, sizeof (header));
 		return nStatus? nStatus : ERR_OUTOFMEMORY;
@@ -185,8 +193,12 @@ begin_format:
 
 		if (IsDeviceMounted (devName))
 		{
+	        SLOG_TRACE("[TCFormatVolume] begin_format, IsDeviceMounted return true.");
+
 			if ((dev = DismountDrive (devName, volParams->volumePath)) == INVALID_HANDLE_VALUE)
 			{
+	            SLOG_TRACE("[TCFormatVolume] begin_format, FORMAT_CANT_DISMOUNT_FILESYS.");
+
 				Error ("FORMAT_CANT_DISMOUNT_FILESYS", hwndDlg);
 				nStatus = ERR_DONT_REPORT;
 				goto error;
@@ -204,6 +216,8 @@ begin_format:
 				&dwResult,
 				NULL))
 			{
+	            SLOG_TRACE("[TCFormatVolume] begin_format, DeviceIoControl return false.");
+
 				bFailedRequiredDASD = TRUE;
 			}
 		}
@@ -259,6 +273,7 @@ begin_format:
 			&dwResult,
 			NULL);
 
+	    SLOG_TRACE("[TCFormatVolume] DeviceIoControl return false.");
 
 		// If DASD is needed but we failed to obtain it, perform open - 'quick format' - close - open
 		// so that the filesystem driver does not prevent us from formatting hidden sectors.
@@ -284,6 +299,7 @@ begin_format:
 				dev = CreateFile (devName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 				if (dev != INVALID_HANDLE_VALUE)
 				{
+	                SLOG_TRACE("[TCFormatVolume] Exclusive access denied -- retry in shared mode.");
 					if (!volParams->bForceOperation && (Silent || (IDNO == MessageBoxW (volParams->hwndDlg, GetString ("DEVICE_IN_USE_FORMAT"), lpszTitle, MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2))))
 					{
 						nStatus = ERR_DONT_REPORT;
@@ -292,6 +308,7 @@ begin_format:
 				}
 				else
 				{
+	                SLOG_TRACE("[TCFormatVolume] Exclusive access denied -- retry in shared mode.");
 					handleWin32Error (volParams->hwndDlg, SRC_POS);
 					Error ("CANT_ACCESS_VOL", hwndDlg);
 					nStatus = ERR_DONT_REPORT;
@@ -332,6 +349,8 @@ begin_format:
 	}
 	else
 	{
+	    SLOG_TRACE("[TCFormatVolume] DFile-hosted volume.");
+
 		/* File-hosted volume */
 
 		dev = CreateFile (volParams->volumePath, GENERIC_READ | GENERIC_WRITE,
@@ -340,6 +359,8 @@ begin_format:
 
 		if (dev == INVALID_HANDLE_VALUE)
 		{
+	        SLOG_TRACE("[TCFormatVolume] CreateFile return invalid handle.");
+
 			nStatus = ERR_OS_ERROR;
 			goto error;
 		}
@@ -394,6 +415,7 @@ begin_format:
 		if (volParams->hiddenVolHostSize < TC_MIN_HIDDEN_VOLUME_HOST_SIZE || volParams->hiddenVolHostSize > TC_MAX_HIDDEN_VOLUME_HOST_SIZE)
 		{
 			nStatus = ERR_VOL_SIZE_WRONG;
+	        SLOG_TRACE("[TCFormatVolume] error, nStatus = %d", nStatus);
 			goto error;
 		}
 
@@ -404,6 +426,7 @@ begin_format:
 		if (!SetFilePointerEx ((HANDLE) dev, headerOffset, NULL, FILE_BEGIN))
 		{
 			nStatus = ERR_OS_ERROR;
+	        SLOG_TRACE("[TCFormatVolume] error, nStatus = %d", nStatus);
 			goto error;
 		}
 	}
@@ -417,6 +440,7 @@ begin_format:
 		if (!SetFilePointerEx ((HANDLE) dev, offset, NULL, FILE_BEGIN))
 		{
 			nStatus = ERR_OS_ERROR;
+	        SLOG_TRACE("[TCFormatVolume] error, nStatus = %d", nStatus);
 			goto error;
 		}
 	}
@@ -427,6 +451,7 @@ begin_format:
 		if (!WriteEffectiveVolumeHeader (volParams->bDevice, dev, header))
 		{
 			nStatus = ERR_OS_ERROR;
+	        SLOG_TRACE("[TCFormatVolume] error, nStatus = %d", nStatus);
 			goto error;
 		}
 
@@ -440,12 +465,14 @@ begin_format:
 			if (!WriteFile (dev, buf, sizeof (buf), &bytesWritten, NULL))
 			{
 				nStatus = ERR_OS_ERROR;
+				SLOG_TRACE("[TCFormatVolume] error, nStatus = %d", nStatus);
 				goto error;
 			}
 
 			if (bytesWritten != sizeof (buf))
 			{
 				nStatus = ERR_PARAMETER_INCORRECT;
+				SLOG_TRACE("[TCFormatVolume] error, nStatus = %d", nStatus);
 				goto error;
 			}
 		}
@@ -460,6 +487,7 @@ begin_format:
 		if (dataOffset % FormatSectorSize != 0)
 		{
 			nStatus = ERR_VOL_SIZE_WRONG;
+	        SLOG_TRACE("[TCFormatVolume] error, nStatus = %d", nStatus);
 			goto error;
 		}
 
@@ -470,6 +498,7 @@ begin_format:
 	startSector = dataOffset / FormatSectorSize;
 
 	// Format filesystem
+	SLOG_TRACE("Format.c - [TCFormatVolume] Format filesystem.");
 
 	switch (volParams->fileSystem)
 	{
@@ -481,13 +510,18 @@ begin_format:
 		if (volParams->bDevice && !StartFormatWriteThread())
 		{
 			nStatus = ERR_OS_ERROR;
+	        SLOG_TRACE("Format.c - [TCFormatVolume] error, nStatus = %d", nStatus);
 			goto error;
 		}
 
 		nStatus = FormatNoFs (hwndDlg, startSector, num_sectors, dev, cryptoInfo, volParams->quickFormat);
+	    SLOG_TRACE("Format.c - [TCFormatVolume] FormatNoFs over, nStatus = %d", nStatus);
 
-		if (volParams->bDevice)
+		if (volParams->bDevice) {
+			SLOG_TRACE("Format.c - [TCFormatVolume] StopFormatWriteThread begin.");
 			StopFormatWriteThread();
+			SLOG_TRACE("Format.c - [TCFormatVolume] SStopFormatWriteThread end.");
+		}
 
 		break;
 
@@ -525,22 +559,28 @@ begin_format:
 		break;
 
 	default:
+	    SLOG_TRACE("Format.c - [TCFormatVolume] nStatus = ERR_PARAMETER_INCORRECT");
 		nStatus = ERR_PARAMETER_INCORRECT;
 		goto error;
 	}
 
-	if (nStatus != ERR_SUCCESS)
+	if (nStatus != ERR_SUCCESS) {
+	    SLOG_TRACE("[TCFormatVolume] FormatNoFs over, nStatus = %d", nStatus);
 		goto error;
+	}
 
 	// Write header backup
 	offset.QuadPart = volParams->hiddenVol ? volParams->hiddenVolHostSize - TC_HIDDEN_VOLUME_HEADER_OFFSET : dataAreaSize + TC_VOLUME_HEADER_GROUP_SIZE;
 
+	SLOG_TRACE("Format.c - [TCFormatVolume] Start SetFilePointerEx.");
 	if (!SetFilePointerEx ((HANDLE) dev, offset, NULL, FILE_BEGIN))
 	{
 		nStatus = ERR_OS_ERROR;
+	    SLOG_TRACE("[TCFormatVolume] FormatNoFs over, nStatus = %d", nStatus);
 		goto error;
 	}
 
+	SLOG_TRACE("Format.c - [TCFormatVolume] Start CreateVolumeHeaderInMemory.");
 	nStatus = CreateVolumeHeaderInMemory (hwndDlg, FALSE,
 		header,
 		volParams->ea,
@@ -559,21 +599,27 @@ begin_format:
 		FormatSectorSize,
 		FALSE);
 
+	SLOG_TRACE("Start WriteEffectiveVolumeHeader.");
 	if (!WriteEffectiveVolumeHeader (volParams->bDevice, dev, header))
 	{
 		nStatus = ERR_OS_ERROR;
+	    SLOG_TRACE("[TCFormatVolume] FormatNoFs over, nStatus = %d", nStatus);
 		goto error;
 	}
+	SLOG_TRACE("WriteEffectiveVolumeHeader over.");
 
 	// Fill reserved header sectors (including the backup header area) with random data
 	if (!volParams->hiddenVol)
 	{
 		BOOL bUpdateBackup = FALSE;
 
+		SLOG_TRACE("Format.c - [TCFormatVolume] Start WriteRandomDataToReservedHeaderAreas.");
 		nStatus = WriteRandomDataToReservedHeaderAreas (hwndDlg, dev, cryptoInfo, dataAreaSize, FALSE, FALSE);
 
-		if (nStatus != ERR_SUCCESS)
+		if (nStatus != ERR_SUCCESS) {
+			SLOG_TRACE("[TCFormatVolume] FormatNoFs over, nStatus = %d", nStatus);
 			goto error;
+		}
 
 		// write fake hidden volume header to protect against attacks that use statistical entropy
 		// analysis to detect presence of hidden volumes.
@@ -585,6 +631,7 @@ begin_format:
 
 			hiddenOffset.QuadPart = bUpdateBackup ? dataAreaSize + TC_VOLUME_HEADER_GROUP_SIZE + TC_HIDDEN_VOLUME_HEADER_OFFSET: TC_HIDDEN_VOLUME_HEADER_OFFSET;
 
+		    SLOG_TRACE("Format.c - [TCFormatVolume] Start CreateVolumeHeaderInMemory.");
 			nStatus = CreateVolumeHeaderInMemory (hwndDlg, FALSE,
 				header,
 				volParams->ea,
@@ -603,20 +650,24 @@ begin_format:
 				FormatSectorSize,
 				FALSE);
 
-			if (nStatus != ERR_SUCCESS)
+			if (nStatus != ERR_SUCCESS) {
+				SLOG_TRACE("[TCFormatVolume] FormatNoFs over, nStatus = %d", nStatus);
 				goto error;
+			}
 
 			crypto_close (dummyInfo);
 
 			if (!SetFilePointerEx ((HANDLE) dev, hiddenOffset, NULL, FILE_BEGIN))
 			{
 				nStatus = ERR_OS_ERROR;
+				SLOG_TRACE("[TCFormatVolume] FormatNoFs over, nStatus = %d", nStatus);
 				goto error;
 			}
 
 			if (!WriteEffectiveVolumeHeader (volParams->bDevice, dev, header))
 			{
 				nStatus = ERR_OS_ERROR;
+				SLOG_TRACE("[TCFormatVolume] FormatNoFs over, nStatus = %d", nStatus);
 				goto error;
 			}
 
@@ -632,8 +683,10 @@ begin_format:
 		Sleep (500);	// User-friendly GUI
 #endif
 
+	SLOG_TRACE("Format.c - [TCFormatVolume] ==================mark=============.");
 error:
 	dwError = GetLastError();
+	SLOG_TRACE("[TCFormatVolume] error, nStatus = %d, dwError = %d", nStatus, dwError);
 
 	burn (header, sizeof (header));
 	VirtualUnlock (header, sizeof (header));
@@ -659,16 +712,31 @@ error:
 	if (nStatus != 0)
 	{
 		SetLastError(dwError);
+	    SLOG_TRACE("Format.c - [TCFormatVolume] error, nStatus = %d, dwError = %d", nStatus, dwError);
 		goto fv_end;
 	}
 
 	if (volParams->fileSystem == FILESYS_NTFS || volParams->fileSystem == FILESYS_EXFAT || volParams->fileSystem == FILESYS_REFS)
 	{
 		// Quick-format volume as NTFS
-		int driveNo = GetLastAvailableDrive ();
+		int mountVolumeRet;
+		int driveNo;
 		MountOptions mountOptions;
 		int retCode;
 		int fsType = volParams->fileSystem;
+
+	    SLOG_TRACE("[TCFormatVolume] volParams->drive_in_cmd = %lc", volParams->drive_in_cmd);
+		if (volParams->drive_in_cmd >= L'A' && volParams->drive_in_cmd <= L'Z') {
+	        SLOG_TRACE("[TCFormatVolume] Input drive in command is %lc", volParams->drive_in_cmd);
+			driveNo = volParams->drive_in_cmd - L'A';
+		} else if (volParams->drive_in_cmd >= L'a' && volParams->drive_in_cmd <= L'z') {
+	        SLOG_TRACE("[TCFormatVolume] Input drive in command is %lc", volParams->drive_in_cmd);
+			driveNo = volParams->drive_in_cmd - L'a';
+		} else {
+		    driveNo = GetLastAvailableDrive ();
+	        SLOG_TRACE("[TCFormatVolume] GetLastAvailableDrive return %d", driveNo);
+		}
+
 
 		ZeroMemory (&mountOptions, sizeof (mountOptions));
 
@@ -681,6 +749,7 @@ error:
 			}
 
 			nStatus = ERR_NO_FREE_DRIVES;
+	        SLOG_TRACE("[TCFormatVolume] nStatus = %d", nStatus);
 			goto fv_end;
 		}
 
@@ -691,7 +760,12 @@ error:
 		mountOptions.PartitionInInactiveSysEncScope = FALSE;
 		mountOptions.UseBackupHeader = FALSE;
 
-		if (MountVolume (volParams->hwndDlg, driveNo, volParams->volumePath, volParams->password, volParams->pkcs5, volParams->pim, FALSE, FALSE, FALSE, TRUE, &mountOptions, FALSE, TRUE) < 1)
+
+	    SLOG_TRACE("[TCFormatVolume] Start MountVolume.");
+		mountVolumeRet = MountVolume (volParams->hwndDlg, driveNo, volParams->volumePath, volParams->password, volParams->pkcs5, volParams->pim, FALSE, FALSE, FALSE, TRUE, &mountOptions, TRUE, TRUE);
+	    SLOG_TRACE("[TCFormatVolume] mount_volume_ret = %d", mountVolumeRet);
+		
+		if (mountVolumeRet < 1)
 		{
 			if (!Silent)
 			{
@@ -699,6 +773,7 @@ error:
 				MessageBoxW (volParams->hwndDlg, GetString ("FORMAT_NTFS_STOP"), lpszTitle, ICON_HAND);
 			}
 			nStatus = ERR_VOL_MOUNT_FAILED;
+	        SLOG_TRACE("[TCFormatVolume] MountVolume failed, nStatus = %d", nStatus);
 			goto fv_end;
 		}
 
@@ -709,7 +784,7 @@ error:
 
 		if (retCode != TRUE)
 		{
-			if (!UnmountVolumeAfterFormatExCall (volParams->hwndDlg, driveNo) && !Silent)
+            if (!UnmountVolumeAfterFormatExCall (volParams->hwndDlg, driveNo) && !Silent)
 				MessageBoxW (volParams->hwndDlg, GetString ("CANT_DISMOUNT_VOLUME"), lpszTitle, ICON_HAND);
 
 			if (dataAreaSize <= TC_MAX_FAT_SECTOR_COUNT * FormatSectorSize)
@@ -719,7 +794,7 @@ error:
 					// NTFS format failed and the user wants to try FAT format immediately
 					volParams->fileSystem = FILESYS_FAT;
 					bInstantRetryOtherFilesys = TRUE;
-					volParams->quickFormat = TRUE;		// Volume has already been successfully TC-formatted
+					volParams->quickFormat = TRUE;  // Volume has already been successfully TC-formatted
 					volParams->clusterSize = 0;		// Default cluster size
 					goto begin_format;
 				}

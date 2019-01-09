@@ -41,6 +41,8 @@
 #include "../Boot/Windows/BootCommon.h"
 #endif
 
+#include "Log.h"
+
 /* Volume header v5 structure (used since TrueCrypt 7.0): */
 //
 // Offset	Length	Description
@@ -1190,6 +1192,7 @@ BOOL WriteEffectiveVolumeHeader (BOOL device, HANDLE fileHandle, byte *header)
 	byte sectorBuffer[TC_MAX_VOLUME_SECTOR_SIZE];
 	DWORD bytesDone;
 	DISK_GEOMETRY geometry;
+	SLOG_TRACE("WriteEffectiveVolumeHeader0.");
 
 	if (!device)
 	{
@@ -1205,15 +1208,19 @@ BOOL WriteEffectiveVolumeHeader (BOOL device, HANDLE fileHandle, byte *header)
 		return TRUE;
 	}
 
+	SLOG_TRACE("WriteEffectiveVolumeHeader1.");
 
 	if (!DeviceIoControl (fileHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &geometry, sizeof (geometry), &bytesDone, NULL))
 		return FALSE;
+
+	SLOG_TRACE("WriteEffectiveVolumeHeader2.");
 
 	if (geometry.BytesPerSector > sizeof (sectorBuffer) || geometry.BytesPerSector < TC_MIN_VOLUME_SECTOR_SIZE)
 	{
 		SetLastError (ERROR_INVALID_PARAMETER);
 		return FALSE;
 	}
+	SLOG_TRACE("WriteEffectiveVolumeHeader3.");
 
 	if (geometry.BytesPerSector != TC_VOLUME_HEADER_EFFECTIVE_SIZE)
 	{
@@ -1232,6 +1239,7 @@ BOOL WriteEffectiveVolumeHeader (BOOL device, HANDLE fileHandle, byte *header)
 		if (!SetFilePointerEx (fileHandle, seekOffset, NULL, FILE_CURRENT))
 			return FALSE;
 	}
+	SLOG_TRACE("WriteEffectiveVolumeHeader4.");
 
 	memcpy (sectorBuffer, header, TC_VOLUME_HEADER_EFFECTIVE_SIZE);
 
@@ -1243,6 +1251,7 @@ BOOL WriteEffectiveVolumeHeader (BOOL device, HANDLE fileHandle, byte *header)
 		SetLastError (ERROR_INVALID_PARAMETER);
 		return FALSE;
 	}
+	SLOG_TRACE("WriteEffectiveVolumeHeader5.");
 
 	return TRUE;
 }

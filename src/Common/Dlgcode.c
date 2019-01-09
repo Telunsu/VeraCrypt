@@ -7389,9 +7389,15 @@ BOOL WrongPwdRetryCountOverLimit (void)
 
 DWORD GetUsedLogicalDrives (void)
 {
+	SLOG_TRACE("[GetUsedLogicalDrives] begin");
+	
 	DWORD dwUsedDrives = GetLogicalDrives();
+	SLOG_TRACE("[GetUsedLogicalDrives] dwUsedDrives = %ld", dwUsedDrives);
+
 	if (!bShowDisconnectedNetworkDrives)
 	{
+	    SLOG_TRACE("[GetUsedLogicalDrives] bShowDisconnectedNetworkDrives is false");
+
 		static DWORD g_dwLastMappedDrives = 0;
 		static time_t g_lastCallTime = 0;
 
@@ -7427,47 +7433,64 @@ DWORD GetUsedLogicalDrives (void)
 			g_lastCallTime = time (NULL);
 		}
 
+	    SLOG_TRACE("[GetUsedLogicalDrives] g_dwLastMappedDrives = %ld", g_dwLastMappedDrives);
+
 		dwUsedDrives |= g_dwLastMappedDrives;
 	}
 
+	SLOG_TRACE("[GetUsedLogicalDrives] dwUsedDrives = %ld", dwUsedDrives);
 	return dwUsedDrives;
 }
 
 
 int GetFirstAvailableDrive ()
 {
+	SLOG_TRACE("[GetFirstAvailableDrive] Begin");
 	DWORD dwUsedDrives = GetUsedLogicalDrives();
+	SLOG_TRACE("[GetFirstAvailableDrive] GetUsedLogicalDrives return dwUsedDrive = %d", dwUsedDrives);
 	int i, drive;
 
 	/* let A: and B: be used as last resort since they can introduce side effects */
 	for (i = 2; i < 28; i++)
 	{
 		drive = (i < 26) ? i : (i - 26);
-		if (!(dwUsedDrives & 1 << drive))
+		if (!(dwUsedDrives & 1 << drive)) {
+			SLOG_TRACE("[GetFirstAvailableDrive] return %d", i);
 			return i;
+		}
 	}
 
+	SLOG_TRACE("[GetFirstAvailableDrive] return -1");
 	return -1;
 }
 
 
 int GetLastAvailableDrive ()
 {
+	SLOG_TRACE("[GetLastAvailableDrive] Begin");
 	DWORD dwUsedDrives = GetUsedLogicalDrives();
+	SLOG_TRACE("[GetLastAvailableDrive] GetUsedLogicalDrives return dwUsedDrive = %d", dwUsedDrives);
+
 	int i;
 
 	for (i = 25; i >= 0; i--)
 	{
-		if (!(dwUsedDrives & 1 << i))
+		if (!(dwUsedDrives & 1 << i)) {
+			SLOG_TRACE("[GetLastAvailableDrive] return %d", i);
 			return i;
+		}
 	}
 
+
+	SLOG_TRACE("[GetLastAvailableDrive] return -1");
 	return -1;
 }
 
 
 BOOL IsDriveAvailable (int driveNo)
 {
+	SLOG_TRACE("[IsDriveAvailable] driveNo = %d", driveNo);
+
 	return (GetUsedLogicalDrives() & (1 << driveNo)) == 0;
 }
 
@@ -7993,23 +8016,31 @@ int MountVolume (HWND hwndDlg,
 	BOOL useVolumeID = FALSE;
 	BYTE volumeID[VOLUME_ID_SIZE] = {0};
 
+	SLOG_TRACE("[MountVolume] ========================0=============");
+
 #ifdef TCMOUNT
 	if (mountOptions->PartitionInInactiveSysEncScope)
 	{
-		if (!CheckSysEncMountWithoutPBA (hwndDlg, volumePath, quiet))
+		if (!CheckSysEncMountWithoutPBA (hwndDlg, volumePath, quiet)) {
+			SLOG_TRACE("[MountVolume] CheckSysEncMountWithoutPBA failed.");
 			return -1;
+		}
 	}
 #endif
 
+	SLOG_TRACE("[MountVolume] Start IsMountedVolume");
 	if (IsMountedVolume (volumePath))
 	{
-		if (!quiet)
+		SLOG_TRACE("[MountVolume] VOL_ALREADY_MOUNTED, volumePath = %ls", volumePath);
+		if (!quiet) 
 			Error ("VOL_ALREADY_MOUNTED", hwndDlg);
 		return -1;
 	}
 
+	SLOG_TRACE("[MountVolume] Start IsDriveAvailable");
 	if (!IsDriveAvailable (driveNo))
 	{
+		SLOG_TRACE("[MountVolume] DRIVE_LETTER_UNAVAILABLE, volumePath = %ls, driveNo = %d", volumePath, driveNo);
 		if (!quiet)
 			Error ("DRIVE_LETTER_UNAVAILABLE", hwndDlg);
 
@@ -8020,6 +8051,7 @@ int MountVolume (HWND hwndDlg,
 	if (password == NULL && IsPasswordCacheEmpty ())
 		return 0;
 
+	SLOG_TRACE("[MountVolume] ========================1============");
 	ZeroMemory (&mount, sizeof (mount));
 	mount.bExclusiveAccess = sharedAccess ? FALSE : TRUE;
 	mount.SystemFavorite = MountVolumesAsSystemFavorite;
@@ -8058,6 +8090,7 @@ retry:
 	mount.bTrueCryptMode = truecryptMode;
 	mount.VolumePim = pim;
 
+	SLOG_TRACE("[MountVolume] ========================2=============");
 	// Windows 2000 mount manager causes problems with remounted volumes
 	if (CurrentOSMajor == 5 && CurrentOSMinor == 0)
 		mount.bMountManager = FALSE;
@@ -8092,6 +8125,8 @@ retry:
 		}
 		else
 		{
+			SLOG_TRACE("[MountVolume] VOLUME_ID_INVALID, volumePaht = %ls", volumePath);
+
 			if (!quiet)
 				Error ("VOLUME_ID_INVALID", hwndDlg);
 
@@ -8102,8 +8137,11 @@ retry:
 	else
 		CreateFullVolumePath (mount.wszVolume, sizeof(mount.wszVolume), volumePath, &bDevice);
 
+	SLOG_TRACE("[MountVolume] ========================3=============");
 	if (!bDevice)
 	{
+		SLOG_TRACE("[MountVolume] bDevice is false, volumePaht = %ls", volumePath);
+
 		// put default values
 		mount.BytesPerSector = 512;
 		mount.BytesPerPhysicalSector = 512;
@@ -8176,6 +8214,7 @@ retry:
 		}
 	}
 
+	SLOG_TRACE("[MountVolume] ========================4=============");
 	if (mountOptions->PartitionInInactiveSysEncScope)
 	{
 		if (mount.wszVolume == NULL || swscanf_s ((const wchar_t *) mount.wszVolume,
@@ -8183,6 +8222,8 @@ retry:
 			&mount.nPartitionInInactiveSysEncScopeDriveNo,
 			sizeof(mount.nPartitionInInactiveSysEncScopeDriveNo)) != 1)
 		{
+			SLOG_TRACE("[MountVolume] NO_SYSENC_PARTITION_SELECTED, volumePaht = %ls", volumePath);
+
 			if (!quiet)
 				Warning ("NO_SYSENC_PARTITION_SELECTED", hwndDlg);
 			return -1;
@@ -8191,6 +8232,7 @@ retry:
 		mount.bPartitionInInactiveSysEncScope = TRUE;
 	}
 
+	SLOG_TRACE("[MountVolume] ========================5=============");
 	if (!quiet)
 	{
 		MountThreadParam mountThreadParam;
@@ -8212,6 +8254,9 @@ retry:
 		dwLastError = GetLastError ();
 	}
 
+	SLOG_TRACE("[MountVolume] dwLastError = %d", dwLastError);
+
+
 	burn (&mount.VolumePassword, sizeof (mount.VolumePassword));
 	burn (&mount.ProtectedHidVolPassword, sizeof (mount.ProtectedHidVolPassword));
 	burn (&mount.pkcs5_prf, sizeof (mount.pkcs5_prf));
@@ -8224,6 +8269,7 @@ retry:
 		// Volume already open by another process
 		if (GetLastError () == ERROR_SHARING_VIOLATION)
 		{
+			SLOG_TRACE("[MountVolume] ERROR_SHARING_VIOLATION");
 			if (FavoriteMountOnArrivalInProgress && ++favoriteMountOnArrivalRetryCount < 10)
 			{
 				Sleep (500);
@@ -8232,6 +8278,8 @@ retry:
 
 			if (mount.bExclusiveAccess == FALSE)
 			{
+			    SLOG_TRACE("[MountVolume] FILE_IN_USE_FAILED");
+
 				if (!quiet)
 					Error ("FILE_IN_USE_FAILED", hwndDlg);
 
@@ -8239,6 +8287,8 @@ retry:
 			}
 			else
 			{
+			    SLOG_TRACE("[MountVolume] mount.bExclusiveAccess is true.");
+
 				if (quiet)
 				{
 					mount.bExclusiveAccess = FALSE;
@@ -8256,14 +8306,22 @@ retry:
 			return -1;
 		}
 
-		if (!quiet && (!MultipleMountOperationInProgress || GetLastError() != ERROR_NOT_READY))
-			handleWin32Error (hwndDlg, SRC_POS);
+		if (!quiet && (!MultipleMountOperationInProgress || GetLastError() != ERROR_NOT_READY)) {
+			SLOG_TRACE("[MountVolume] MultipleMountOperationInProgress = %s", (MultipleMountOperationInProgress ? "true" : "false"));
+			SLOG_TRACE("[MountVolume] Last error = %d", GetLastError());
 
+			handleWin32Error (hwndDlg, SRC_POS);
+		}
+
+		SLOG_TRACE("[MountVolume] return -1");
 		return -1;
 	}
 
+	SLOG_TRACE("[MountVolume] ========================6=============");
 	if (mount.nReturnCode != 0)
 	{
+		SLOG_TRACE("[MountVolume] mount.nReturnCode = %d", mount.nReturnCode);
+
 		if (mount.nReturnCode == ERR_PASSWORD_WRONG)
 		{
 			// Do not report wrong password, if not instructed to 
@@ -8294,8 +8352,11 @@ retry:
 						DWORD dwResult;
 						if (DeviceIoControl (hDriver, TC_IOCTL_OPEN_TEST, &openTestStruct, sizeof (OPEN_TEST_STRUCT), &openTestStruct, sizeof (OPEN_TEST_STRUCT), &dwResult, NULL) && openTestStruct.TCBootLoaderDetected)
 							WarningDirect ((GetWrongPasswordErrorMessage (hwndDlg) + L"\n\n" + GetString ("HIDDEN_VOL_PROT_PASSWORD_US_KEYB_LAYOUT")).c_str(), hwndDlg);
-						else
+						else {
+							SLOG_TRACE("[MountVolume] DeviceIoControl failed, return code = %d", mount.nReturnCode);
+
 							handleError (hwndDlg, mount.nReturnCode, SRC_POS);
+						}
 					}
 				}
 				else
@@ -8384,9 +8445,12 @@ retry:
 
 	BroadcastDeviceChange (DBT_DEVICEARRIVAL, driveNo, 0);
 
-	if (mount.bExclusiveAccess == FALSE)
+	if (mount.bExclusiveAccess == FALSE) {
+		SLOG_TRACE("[MountVolume] return 1");
 		return 2;
+	}
 
+	SLOG_TRACE("[MountVolume] return 1");
 	return 1;
 }
 
