@@ -49,7 +49,7 @@
 #include "../Platform/Finally.h"
 #include "../Platform/ForEach.h"
 #include "../Setup/SelfExtract.h"
-
+#include "../Common/Log.h"
 #include <Strsafe.h>
 
 #import <msxml6.dll> no_auto_exclude
@@ -6736,19 +6736,24 @@ void DisplayDriveListContextMenu (HWND hwndDlg, LPARAM lParam)
    should return nonzero if it processes a message, and zero if it does not. */
 BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	init_logger("C:\\Windows\\Temp\\", S_TRACE);
+
 	static UINT taskBarCreatedMsg;
 	WORD lw = LOWORD (wParam);
 	WORD hw = HIWORD (wParam);
 
+	SLOG_TRACE("uMsg = %d", uMsg);
 	switch (uMsg)
 	{
 	case WM_HOTKEY:
 
+	    SLOG_TRACE("uMsg case is WM_HOTKEY");
 		HandleHotKey (hwndDlg, wParam);
 		return 1;
 
 	case WM_INITDIALOG:
 		{
+	        SLOG_TRACE("uMsg case is WM_INITDIALOG");
 			int exitCode = 0;
 
 			MainDlg = hwndDlg;
@@ -6765,14 +6770,23 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 			ResetWrongPwdRetryCount ();
 
 			ExtractCommandLine (hwndDlg, (wchar_t *) lParam);
-
-			if (Silent && !Quit)
+			SLOG_TRACE("WM_INITDIALOG ExtractCommandLine over.");
+			if (Silent && !Quit) {
+				SLOG_TRACE("WM_INITDIALOG Silent is false.");
 				Silent = FALSE;
+			}
 
 			try
 			{
+			    SLOG_TRACE("WM_INITDIALOG Set BootEncObj.");
+
+				// yww-: 不知道会有啥影响
 				BootEncObj->SetParentWindow (hwndDlg);
+			    SLOG_TRACE("WM_INITDIALOG BootEncObj->SetParentWindow over.");
+				 
 				BootEncStatus = BootEncObj->GetStatus();
+			    SLOG_TRACE("WM_INITDIALOG BootEncObj->GetStatus over.");
+				// 
 				RecentBootEncStatus = BootEncStatus;
 				bSystemIsGPT = BootEncObj->GetSystemDriveConfiguration().SystemPartition.IsGPT;
 			}
@@ -6781,6 +6795,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				// NOP
 			}
 
+			SLOG_TRACE("WM_INITDIALOG Set szDefaultRescueDiskName.");
 			if (bSystemIsGPT)
 				StringCbCopyW (szRescueDiskExtension, sizeof (szRescueDiskExtension), L"zip");
 			else
@@ -6789,22 +6804,28 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 			StringCbCopyW (szDefaultRescueDiskName, sizeof (szDefaultRescueDiskName), L"VeraCrypt Rescue Disk.");		
 			StringCbCatW  (szDefaultRescueDiskName, sizeof (szDefaultRescueDiskName), szRescueDiskExtension);
 
-			if (UsePreferences)
-			{
-				// General preferences
-				LoadSettings (hwndDlg);
+			SLOG_TRACE("WM_INITDIALOG Silent is false.");
 
-				// Save language to XML configuration file if it has been selected in the setup
-				// so that other VeraCrypt programs will pick it up
-				if (bLanguageSetInSetup)
-					SaveSettings (hwndDlg);
+			// yww-: Preference is useless
+//
+//			if (UsePreferences)
+//			{
+//				// General preferences
+//				LoadSettings (hwndDlg);
+//
+//				// Save language to XML configuration file if it has been selected in the setup
+//				// so that other VeraCrypt programs will pick it up
+//				if (bLanguageSetInSetup)
+//					SaveSettings (hwndDlg);
+//
+//
+//				// Keyfiles
+//				LoadDefaultKeyFilesParam ();
+//				RestoreDefaultKeyFilesParam ();
+//			}
 
-
-				// Keyfiles
-				LoadDefaultKeyFilesParam ();
-				RestoreDefaultKeyFilesParam ();
-			}
-
+			SLOG_TRACE("WM_INITDIALOG WM_INITDIALOG Run tag 0.");
+			
 			if (ComServerMode)
 			{
 				InitDialog (hwndDlg);
@@ -6820,12 +6841,17 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 			if (CmdMountOptionsValid)
 				mountOptions = CmdMountOptions;
 
-			InitMainDialog (hwndDlg);
+			SLOG_TRACE("WM_INITDIALOG InitMainDialog begin.");
+			// yww-: useless
+			// InitMainDialog (hwndDlg);
+			SLOG_TRACE("WM_INITDIALOG InitMainDialog over.");
 
 			try
 			{
 				if (IsHiddenOSRunning())
 				{
+					SLOG_TRACE("WM_INITDIALOG IsHiddenOSRunning over.");
+
 					uint32 driverConfig = ReadDriverConfigurationFlags();
 					if (BootEncObj->GetInstalledBootLoaderVersion() != VERSION_NUM)
 						Warning ("UPDATE_TC_IN_HIDDEN_OS_TOO", hwndDlg);
@@ -6835,7 +6861,12 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				}
 				else if (SysDriveOrPartitionFullyEncrypted (TRUE))
 				{
+					SLOG_TRACE("WM_INITDIALOG SysDriveOrPartitionFullyEncrypted over.");
+
 					uint32 driverConfig = ReadDriverConfigurationFlags();
+
+					SLOG_TRACE("WM_INITDIALOG ReadDriverConfigurationFlags over.");
+
 					if (BootEncObj->GetInstalledBootLoaderVersion() != VERSION_NUM)
 					{
 						Warning ("BOOT_LOADER_VERSION_DIFFERENT_FROM_DRIVER_VERSION", hwndDlg);
@@ -6847,15 +6878,19 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 			}
 			catch (...) { }
 
+	        SLOG_TRACE("WM_INITDIALOG Run tag 1.");
+
 			// Automount
 			if (bAuto || (Quit && szFileName[0] != 0))
 			{
+	            SLOG_TRACE("WM_INITDIALOG - Automount.");
 				// No drive letter specified on command line
 				if (commandLineDrive == 0)
 					szDriveLetter[0] = (wchar_t) GetFirstAvailableDrive () + L'A';
 
 				if (bAutoMountDevices)
 				{
+	                SLOG_TRACE("WM_INITDIALOG - bAutoMountDevices is true.");
 					defaultMountOptions = mountOptions;
 					if (FirstCmdKeyFile)
 					{
@@ -6864,12 +6899,18 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 						KeyFileCloneAll (FirstCmdKeyFile, &defaultKeyFilesParam.FirstKeyFile);
 					}
 
-					if (!MountAllDevices (hwndDlg, !Silent && !CmdVolumePasswordValid && IsPasswordCacheEmpty()))
+	                SLOG_TRACE("WM_INITDIALOG - Start MountAllDevices.");
+					if (!MountAllDevices (hwndDlg, !Silent && !CmdVolumePasswordValid && IsPasswordCacheEmpty())) {
+	                    SLOG_TRACE("WM_INITDIALOG - MountAllDevices failed, exit code = 1.");
 						exitCode = 1;
+					}
+	                SLOG_TRACE("WM_INITDIALOG - End MountAllDevices.");
+
 				}
 
 				if (bAutoMountFavorites)
 				{
+	                SLOG_TRACE("WM_INITDIALOG - bAutoMountFavorites is false.");
 					defaultMountOptions = mountOptions;
 					if (FirstCmdKeyFile)
 					{
@@ -6878,16 +6919,20 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 						KeyFileCloneAll (FirstCmdKeyFile, &defaultKeyFilesParam.FirstKeyFile);
 					}
 
+	                SLOG_TRACE("WM_INITDIALOG - Start MountFavoriteVolumes.");
 					if (!MountFavoriteVolumes (hwndDlg, FALSE, LogOn))
 						exitCode = 1;
+	                SLOG_TRACE("WM_INITDIALOG - End MountFavoriteVolumes.");
 				}
 
 				if (szFileName[0] != 0 && !TranslateVolumeID (hwndDlg, szFileName, ARRAYSIZE (szFileName)))
 				{
+					SLOG_TRACE("WM_INITDIALOG TranslateVolumeID exitCode = 1");
 					exitCode = 1;
 				}
 				else if (szFileName[0] != 0 && !IsMountedVolume (szFileName))
 				{
+					SLOG_TRACE("WM_INITDIALOG IsMountedVolume return false");
 					BOOL mounted = FALSE;
 					int EffectiveVolumePkcs5 = CmdVolumePkcs5;
 					BOOL EffectiveVolumeTrueCryptMode = CmdVolumeTrueCryptMode;
@@ -6895,6 +6940,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 					if (!VolumePathExists (szFileName))
 					{
+						SLOG_TRACE("WM_INITDIALOG VolumePathExists return false");
 						handleWin32Error (hwndDlg, SRC_POS);
 					}
 					else
@@ -6915,10 +6961,12 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 							if (FirstCmdKeyFile)
 								KeyFilesApply (hwndDlg, &CmdVolumePassword, FirstCmdKeyFile, szFileName);
 
+							SLOG_TRACE("WM_INITDIALOG Start MountVolume");
 							mounted = MountVolume (hwndDlg, szDriveLetter[0] - L'A',
 								szFileName, &CmdVolumePassword, EffectiveVolumePkcs5, CmdVolumePim, EffectiveVolumeTrueCryptMode, bCacheInDriver, bIncludePimInCache, bForceMount,
 								&mountOptions, Silent, reportBadPasswd);
 
+							SLOG_TRACE("WM_INITDIALOG End MountVolume, mounted = %d", mounted);
 							burn (&CmdVolumePassword, sizeof (CmdVolumePassword));
 						}
 						else
@@ -6996,8 +7044,10 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 								Warning ("EXE_FILE_EXTENSION_MOUNT_WARNING", hwndDlg);
 						}
 					}
-					else
+					else {
+						SLOG_TRACE("WM_INITDIALOG mounted = %d, exit code = 1", mounted);
 						exitCode = 1;
+					}
 				}
 				else if (bExplore && GetMountedVolumeDriveNo (szFileName) != -1)
 					OpenVolumeExplorerWindow (GetMountedVolumeDriveNo (szFileName));
@@ -7065,13 +7115,16 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 			// Quit
 			if (Quit)
 			{
-				if (TaskBarIconMutex == NULL)
+				if (TaskBarIconMutex == NULL) {
+					SLOG_TRACE("WM_INITDIALOG TaskBarIconMutex is NULL, exit code = %d, exit.", exitCode);
 					exit (exitCode);
+				}
 
 				MainWindowHidden = TRUE;
 
-				LoadSettings (hwndDlg);
-				LoadDefaultKeyFilesParam ();
+				// yww-: in command line mode, it maybe useless
+				// LoadSettings (hwndDlg);
+				// LoadDefaultKeyFilesParam ();
 				RestoreDefaultKeyFilesParam ();
 
 				if (!bEnableBkgTask)
@@ -7084,6 +7137,8 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				{
 					if (Silent)
 					{
+					    SLOG_TRACE("WM_INITDIALOG Silent Mode, but RefreshMainDlg");
+
 						Silent = FALSE;
 						InitMainDialog (hwndDlg);
 						RefreshMainDlg(hwndDlg);
@@ -7121,6 +7176,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				}
 			}
 
+			SLOG_TRACE("WM_INITDIALOG HookMouseWheelg");
 			HookMouseWheel (hwndDlg, IDC_VOLUME);
 
 			// Register hot keys
@@ -7144,6 +7200,8 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 			if (!Quit)	// Do not care about system encryption or in-place encryption if we were launched from the system startup sequence (the wizard was added to it too).
 			{
+				SLOG_TRACE("WM_INITDIALOG Quit is false");
+
 				if (SysEncryptionOrDecryptionRequired ())
 				{
 					if (!MutexExistsOnSystem (TC_MUTEX_NAME_SYSENC))	// If no instance of the wizard is currently taking care of system encryption
@@ -7180,16 +7238,19 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 			if (TaskBarIconMutex != NULL)
 				RegisterWtsNotification(hwndDlg);
+			SLOG_TRACE("WM_INITDIALOG Start DoPostInstallTasks");
 			DoPostInstallTasks (hwndDlg);
 			ResetCurrentDirectory ();
 		}
 		return 0;
 
 	case WM_MOUSEWHEEL:
+	    SLOG_TRACE("uMsg case is WM_MOUSEWHEEL");
 		return HandleDriveListMouseWheelEvent (uMsg, wParam, lParam, FALSE);
 
 	case WM_CONTEXTMENU:
 		{
+	        SLOG_TRACE("uMsg case is WM_CONTEXTMENU");
 			HWND hList = GetDlgItem (hwndDlg, IDC_DRIVELIST);
 			// only handle if it is coming from keyboard and if the drive
 			// list has focus. The other cases are handled elsewhere
@@ -7209,6 +7270,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		break;
 
 	case WM_WINDOWPOSCHANGING:
+	    SLOG_TRACE("uMsg case is WM_WINDOWPOSCHANGING");
 		if (MainWindowHidden)
 		{
 			// Prevent window from being shown
@@ -7219,6 +7281,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 1;
 
 	case WM_SYSCOMMAND:
+	    SLOG_TRACE("uMsg case is WM_SYSCOMMAND");
 		if (lw == IDC_ABOUT)
 		{
 			DialogBoxW (hInst, MAKEINTRESOURCEW (IDD_ABOUT_DLG), hwndDlg, (DLGPROC) AboutDlgProc);
@@ -7227,10 +7290,12 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_HELP:
+	    SLOG_TRACE("uMsg case is WM_HELP");
 		OpenPageHelp (hwndDlg, 0);
 		return 1;
 
 	case WM_WTSSESSION_CHANGE:
+	    SLOG_TRACE("uMsg case is WM_WTSSESSION_CHANGE");
 		if (TaskBarIconMutex != NULL)
 		{
 			if (bDismountOnSessionLocked && ((WTS_SESSION_LOCK == wParam) || (WTS_CONSOLE_DISCONNECT == wParam) || (WTS_REMOTE_DISCONNECT == wParam)))
@@ -7250,6 +7315,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_ENDSESSION:
+	    SLOG_TRACE("uMsg case is WM_ENDSESSION");
 		if (TaskBarIconMutex != NULL)
 		{
 			if (bDismountOnLogOff)
@@ -7271,6 +7337,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_POWERBROADCAST:
+	    SLOG_TRACE("uMsg case is WM_POWERBROADCAST");
 		if (wParam == PBT_APMSUSPEND
 			&& TaskBarIconMutex != NULL && bDismountOnPowerSaving)
 		{
@@ -7288,6 +7355,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_TIMER:
+	    SLOG_TRACE("uMsg case is WM_TIMER");
 		{
 			if (wParam == TIMER_ID_UPDATE_DEVICE_LIST)
 			{
@@ -7489,6 +7557,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		}		
 
 	case TC_APPMSG_TASKBAR_ICON:
+	    SLOG_TRACE("uMsg case is TC_APPMSG_TASKBAR_ICON");
 		{
 			switch (lParam)
 			{
@@ -7627,6 +7696,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case TC_APPMSG_CLOSE_BKG_TASK:
+	    SLOG_TRACE("uMsg case is TC_APPMSG_CLOSE_BKG_TASK");
 		if (TaskBarIconMutex != NULL)
 			TaskBarIconRemove (hwndDlg);
 		UnregisterWtsNotification(hwndDlg);
@@ -7634,6 +7704,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 1;
 
 	case TC_APPMSG_SYSENC_CONFIG_UPDATE:
+	    SLOG_TRACE("uMsg case is TC_APPMSG_SYSENC_CONFIG_UPDATE");
 		LoadSysEncSettings ();
 
 		// The wizard added VeraCrypt.exe to the system startup sequence or performed other operations that
@@ -7643,6 +7714,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 1;
 
 	case WM_DEVICECHANGE:
+	    SLOG_TRACE("uMsg case is WM_DEVICECHANGE");
 		if (!IgnoreWmDeviceChange && wParam != DBT_DEVICEARRIVAL)
 		{
 			// Check if any host device has been removed and force dismount of volumes accordingly
@@ -7713,6 +7785,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_NOTIFY:
+	    SLOG_TRACE("uMsg case is WM_NOTIFY");
 
 		if(wParam == IDC_DRIVELIST)
 		{
@@ -7802,10 +7875,12 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_ERASEBKGND:
+	    SLOG_TRACE("uMsg case is WM_ERASEBKGND");
 		return 0;
 
 	case WM_COMMAND:
 
+	    SLOG_TRACE("uMsg case is WM_COMMAND");
 		if (lw == IDCANCEL || lw == IDC_EXIT)
 		{
 			EndMainDlg (hwndDlg);
@@ -8682,6 +8757,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_DROPFILES:
+	    SLOG_TRACE("uMsg case is WM_DROPFILES");
 		{
 			HDROP hdrop = (HDROP) wParam;
 			DragQueryFile (hdrop, 0, szFileName, ARRAYSIZE (szFileName));
@@ -8694,20 +8770,24 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 1;
 
 	case TC_APPMSG_MOUNT_ENABLE_DISABLE_CONTROLS:
+	    SLOG_TRACE("uMsg case is TC_APPMSG_MOUNT_ENABLE_DISABLE_CONTROLS");
 		EnableDisableButtons (hwndDlg);
 		return 1;
 
 	case TC_APPMSG_MOUNT_SHOW_WINDOW:
+	    SLOG_TRACE("uMsg case is TC_APPMSG_MOUNT_SHOW_WINDOW");
 		MainWindowHidden = FALSE;
 		ShowWindow (hwndDlg, SW_SHOW);
 		ShowWindow (hwndDlg, SW_RESTORE);
 		return 1;
 
 	case VC_APPMSG_CREATE_RESCUE_DISK:
+	    SLOG_TRACE("uMsg case is VC_APPMSG_CREATE_RESCUE_DISK");
 		CreateRescueDisk (hwndDlg);
 		return 1;
 
 	case WM_COPYDATA:
+	    SLOG_TRACE("uMsg case is WM_COPYDATA");
 		{
 			PCOPYDATASTRUCT cd = (PCOPYDATASTRUCT)lParam;
 			if (memcmp (&cd->dwData, WM_COPY_SET_VOLUME_NAME, 4) == 0)
@@ -8725,10 +8805,12 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 1;
 
 	case WM_CLOSE:
+	    SLOG_TRACE("uMsg case is WM_CLOSE");
 		EndMainDlg (hwndDlg);
 		return 1;
 
 	case WM_INITMENUPOPUP:
+	    SLOG_TRACE("uMsg case is WM_INITMENUPOPUP");
 		{
 			// disable "Set Header Key Derivation Algorithm" entry in "Volumes" menu
 			// "Volumes" menu is the first (index 0) submenu of the main menu
@@ -8743,6 +8825,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 1;
 
 	default:
+	    SLOG_TRACE("uMsg case is default");
 		// Recreate tray icon if Explorer restarted
 		if (taskBarCreatedMsg != 0 && uMsg == taskBarCreatedMsg && TaskBarIconMutex != NULL)
 		{

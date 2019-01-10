@@ -222,6 +222,7 @@ nmake.exe /nologo RELEASE=1 SINGLE_CIPHER=TWOFISH</NMakeReBuildCommandLine>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Common\Log.c" />
     <ClCompile Include="BootConfig.cpp" />
     <ClCompile Include="BootConsoleIo.cpp" />
     <ClCompile Include="BootDebug.cpp" />

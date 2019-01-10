@@ -7938,11 +7938,18 @@ void ShowWaitDialog(HWND hwnd, BOOL bUseHwndAsParent, WaitThreadProc callback, v
 
 static BOOL PerformMountIoctl (MOUNT_STRUCT* pmount, LPDWORD pdwResult, BOOL useVolumeID, BYTE volumeID[VOLUME_ID_SIZE])
 {
+	BOOL ret = FALSE;
 	if (useVolumeID)
 	{
+		SLOG_TRACE("useVolumeID is true.");
+
 		wstring devicePath = FindDeviceByVolumeID (volumeID, FALSE);
+		SLOG_TRACE("FindDeviceByVolumeID is over.");
+
 		if (devicePath == L"")
 		{
+			SLOG_TRACE("devicePath is empty.");
+
 			if (pdwResult)
 				*pdwResult = 0;
 			SetLastError (ERROR_PATH_NOT_FOUND);
@@ -7950,13 +7957,17 @@ static BOOL PerformMountIoctl (MOUNT_STRUCT* pmount, LPDWORD pdwResult, BOOL use
 		}
 		else
 		{
+			SLOG_TRACE("Start CreateFullVolumePath.");
 			BOOL bDevice = FALSE;
 			CreateFullVolumePath (pmount->wszVolume, sizeof(pmount->wszVolume), devicePath.c_str(), &bDevice);
 		}
 	}
 	
-	return DeviceIoControl (hDriver, TC_IOCTL_MOUNT_VOLUME, pmount,
+	SLOG_TRACE("Start DeviceIoControl.");
+	ret = DeviceIoControl (hDriver, TC_IOCTL_MOUNT_VOLUME, pmount,
 			sizeof (MOUNT_STRUCT), pmount, sizeof (MOUNT_STRUCT), pdwResult, NULL);
+	SLOG_TRACE("End DeviceIoControl, ret = %s", ((ret == TRUE) ? "TRUE" : "FALSE"));
+	return ret;
 }
 
 // specific definitions and implementation for support of mount operation 
@@ -8008,6 +8019,8 @@ int MountVolume (HWND hwndDlg,
 				 BOOL quiet,
 				 BOOL bReportWrongPassword)
 {
+	SLOG_TRACE("[MountVolume] ========================0=============, driverNo = %d", driveNo);
+
 	MOUNT_STRUCT mount;
 	DWORD dwResult, dwLastError = ERROR_SUCCESS;
 	BOOL bResult, bDevice;
@@ -8235,6 +8248,7 @@ retry:
 	SLOG_TRACE("[MountVolume] ========================5=============");
 	if (!quiet)
 	{
+		SLOG_TRACE("[MountVolume] quiet is false");
 		MountThreadParam mountThreadParam;
 		mountThreadParam.pmount = &mount;
 		mountThreadParam.useVolumeID = useVolumeID;
@@ -8249,7 +8263,9 @@ retry:
 	}
 	else
 	{
+		SLOG_TRACE("[MountVolume] Start PerformMountIoctl");
 		bResult = PerformMountIoctl (&mount, &dwResult, useVolumeID, volumeID);
+		SLOG_TRACE("[MountVolume] End PerformMountIoctl");
 
 		dwLastError = GetLastError ();
 	}
@@ -13284,6 +13300,8 @@ BOOL IsRepeatedByteArray (byte value, const byte* buffer, size_t bufferSize)
 
 BOOL TranslateVolumeID (HWND hwndDlg, wchar_t* pathValue, size_t cchPathValue)
 {
+	SLOG_TRACE("Start TranslateVolumeID.");
+
 	BOOL bRet = TRUE;
 	size_t pathLen = pathValue? wcslen (pathValue) : 0;
 	if ((pathLen >= 3) && (_wcsnicmp (pathValue, L"ID:", 3) == 0))
