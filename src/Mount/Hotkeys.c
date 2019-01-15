@@ -593,7 +593,7 @@ BOOL CALLBACK HotkeysDlgProc (HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 			bPlaySoundOnSuccessfulHkDismount = bTPlaySoundOnSuccessfulHkDismount;
 			bDisplayBalloonOnSuccessfulHkDismount = bTDisplayBalloonOnSuccessfulHkDismount;
 
-			SaveSettings (hwndDlg);
+			SaveMountSettings (hwndDlg);
 			EndDialog (hwndDlg, IDCANCEL);
 			return 1;
 		}

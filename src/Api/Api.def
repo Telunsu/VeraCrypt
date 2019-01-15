@@ -1,0 +1,7 @@
+LIBRARY	"TrueCryptApi"
+EXPORTS
+	Initialize
+	Shutdown
+	LoadTrueCryptDriver
+	UnloadTrueCryptDriver
+	MountV

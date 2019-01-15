@@ -184,7 +184,7 @@ BOOL MakeSelfExtractingPackage (HWND hwndDlg, wchar_t *szDestDir)
 		bufLen += 4;					// 32-bit file length
 	}
 
-	buffer = malloc (bufLen + 524288);	// + 512K reserve
+	buffer = (unsigned char*)malloc (bufLen + 524288);	// + 512K reserve
 	if (buffer == NULL)
 	{
 		PkgError (L"Cannot allocate memory for uncompressed data");
@@ -217,7 +217,7 @@ BOOL MakeSelfExtractingPackage (HWND hwndDlg, wchar_t *szDestDir)
 
 		StringCbPrintfW (szTmpFilePath, sizeof(szTmpFilePath), L"%s%s", szDestDir, szCompressedFiles[i]);
 
-		tmpBuffer = LoadFile (szTmpFilePath, &tmpFileSize);
+		tmpBuffer = (unsigned char*)LoadFile (szTmpFilePath, &tmpFileSize);
 
 		if (tmpBuffer == NULL)
 		{
@@ -256,7 +256,7 @@ BOOL MakeSelfExtractingPackage (HWND hwndDlg, wchar_t *szDestDir)
 	// Write total size of the uncompressed data
 	szTmp32bitPtr = szTmp32bit;
 	mputLong (szTmp32bitPtr, (unsigned __int32) uncompressedDataLen);
-	if (!SaveBufferToFile (szTmp32bit, outputFile, sizeof (szTmp32bit), TRUE, FALSE))
+	if (!SaveBufferToFile ((char *)szTmp32bit, outputFile, sizeof (szTmp32bit), TRUE, FALSE))
 	{
 		if (_wremove (outputFile))
 			PkgError (L"Cannot write the total size of the uncompressed data.\nFailed also to delete package file");
@@ -278,7 +278,7 @@ BOOL MakeSelfExtractingPackage (HWND hwndDlg, wchar_t *szDestDir)
 	}
 
 	compressedDataLen = uncompressedDataLen + 524288;	// + 512K reserve
-	compressedBuffer = malloc (compressedDataLen);
+	compressedBuffer = (unsigned char*)malloc (compressedDataLen);
 	if (compressedBuffer == NULL)
 	{
 		if (_wremove (outputFile))
@@ -304,7 +304,7 @@ BOOL MakeSelfExtractingPackage (HWND hwndDlg, wchar_t *szDestDir)
 	// Write the total size of the compressed data
 	szTmp32bitPtr = szTmp32bit;
 	mputLong (szTmp32bitPtr, (unsigned __int32) compressedDataLen);
-	if (!SaveBufferToFile (szTmp32bit, outputFile, sizeof (szTmp32bit), TRUE, FALSE))
+	if (!SaveBufferToFile ((char*)szTmp32bit, outputFile, sizeof (szTmp32bit), TRUE, FALSE))
 	{
 		if (_wremove (outputFile))
 			PkgError (L"Cannot write the total size of the compressed data.\nFailed also to delete package file");
@@ -314,7 +314,7 @@ BOOL MakeSelfExtractingPackage (HWND hwndDlg, wchar_t *szDestDir)
 	}
 
 	// Write the compressed data
-	if (!SaveBufferToFile (compressedBuffer, outputFile, compressedDataLen, TRUE, FALSE))
+	if (!SaveBufferToFile ((char*)compressedBuffer, outputFile, compressedDataLen, TRUE, FALSE))
 	{
 		if (_wremove (outputFile))
 			PkgError (L"Cannot write compressed data to the package.\nFailed also to delete package file");
@@ -324,7 +324,7 @@ BOOL MakeSelfExtractingPackage (HWND hwndDlg, wchar_t *szDestDir)
 	}
 
 	// Write the end marker
-	if (!SaveBufferToFile (MagEndMarker, outputFile, strlen (MagEndMarker), TRUE, FALSE))
+	if (!SaveBufferToFile ((char*)MagEndMarker, outputFile, strlen ((char*)MagEndMarker), TRUE, FALSE))
 	{
 		if (_wremove (outputFile))
 			PkgError (L"Cannot write the end marker.\nFailed also to delete package file");
@@ -357,10 +357,10 @@ BOOL MakeSelfExtractingPackage (HWND hwndDlg, wchar_t *szDestDir)
 		WipeSignatureAreas (tmpBuffer);
 
 		szTmp32bitPtr = szTmp32bit;
-		mputLong (szTmp32bitPtr, GetCrc32 (tmpBuffer, tmpFileSize));
+		mputLong (szTmp32bitPtr, GetCrc32 ((unsigned char*)tmpBuffer, tmpFileSize));
 		free (tmpBuffer);
 
-		if (!SaveBufferToFile (szTmp32bit, outputFile, sizeof (szTmp32bit), TRUE, FALSE))
+		if (!SaveBufferToFile ((char*)szTmp32bit, outputFile, sizeof (szTmp32bit), TRUE, FALSE))
 		{
 			if (_wremove (outputFile))
 				PkgError (L"Cannot write the total size of the compressed data.\nFailed also to delete package file");
@@ -408,7 +408,7 @@ BOOL VerifyPackageIntegrity (const wchar_t *path)
 		return FALSE;
 	}
 
-	fileDataEndPos = (int) FindStringInFile (path, MagEndMarker, strlen (MagEndMarker));
+	fileDataEndPos = (int) FindStringInFile (path, (char*)MagEndMarker, strlen ((char*)MagEndMarker));
 	if (fileDataEndPos < 0)
 	{
 		Error ("DIST_PACKAGE_CORRUPTED", NULL);
@@ -425,14 +425,14 @@ BOOL VerifyPackageIntegrity (const wchar_t *path)
 	fileDataStartPos += strlen (MAG_START_MARKER);
 
 
-	if (!LoadInt32 (path, &crc, fileDataEndPos + strlen (MagEndMarker) + 1))
+	if (!LoadInt32 (path, &crc, fileDataEndPos + strlen ((char*)MagEndMarker) + 1))
 	{
 		Error ("CANT_VERIFY_PACKAGE_INTEGRITY", NULL);
 		return FALSE;
 	}
 
 	// Compute the CRC-32 hash of the whole file (except the digital signature area, if present)
-	tmpBuffer = LoadFile (path, &tmpFileSize);
+	tmpBuffer = (unsigned char*)LoadFile (path, (DWORD*)&tmpFileSize);
 
 	if (tmpBuffer == NULL)
 	{
@@ -441,9 +441,9 @@ BOOL VerifyPackageIntegrity (const wchar_t *path)
 	}
 
 	// Zero all bytes that change when an exe is digitally signed (except appended blocks).
-	WipeSignatureAreas (tmpBuffer);
+	WipeSignatureAreas ((char*)tmpBuffer);
 
-	if (crc != GetCrc32 (tmpBuffer, fileDataEndPos + 1 + strlen (MagEndMarker)))
+	if (crc != GetCrc32 (tmpBuffer, fileDataEndPos + 1 + strlen ((char*)MagEndMarker)))
 	{
 		free (tmpBuffer);
 		Error ("DIST_PACKAGE_CORRUPTED", NULL);
@@ -463,7 +463,7 @@ BOOL IsSelfExtractingPackage (void)
 
 	GetModuleFileName (NULL, path, ARRAYSIZE (path));
 
-	return (FindStringInFile (path, MagEndMarker, strlen (MagEndMarker)) != -1);
+	return (FindStringInFile (path, (char*)MagEndMarker, strlen ((char*)MagEndMarker)) != -1);
 }
 
 
@@ -505,7 +505,7 @@ BOOL SelfExtractInMemory (wchar_t *path)
 
 	FreeAllFileBuffers();
 
-	fileDataEndPos = (int) FindStringInFile (path, MagEndMarker, strlen (MagEndMarker));
+	fileDataEndPos = (int) FindStringInFile (path, (char*)MagEndMarker, strlen ((char*)MagEndMarker));
 	if (fileDataEndPos < 0)
 	{
 		Error ("CANNOT_READ_FROM_PACKAGE", NULL);
@@ -526,7 +526,7 @@ BOOL SelfExtractInMemory (wchar_t *path)
 	filePos = fileDataStartPos;
 
 	// Read the stored total size of the uncompressed data
-	if (!LoadInt32 (path, &uncompressedLen, filePos))
+	if (!LoadInt32 (path, (unsigned int*)&uncompressedLen, filePos))
 	{
 		Error ("CANNOT_READ_FROM_PACKAGE", NULL);
 		return FALSE;
@@ -535,7 +535,7 @@ BOOL SelfExtractInMemory (wchar_t *path)
 	filePos += 4;
 
 	// Read the stored total size of the compressed data
-	if (!LoadInt32 (path, &compressedLen, filePos))
+	if (!LoadInt32 (path, (unsigned int*)&compressedLen, filePos))
 	{
 		Error ("CANNOT_READ_FROM_PACKAGE", NULL);
 		return FALSE;
@@ -549,7 +549,7 @@ BOOL SelfExtractInMemory (wchar_t *path)
 	}
 
 	decompressedDataLen = uncompressedLen + 524288;	// + 512K reserve
-	DecompressedData = malloc (decompressedDataLen);
+	DecompressedData = (unsigned char*)malloc (decompressedDataLen);
 	if (DecompressedData == NULL)
 	{
 		Error ("ERR_MEM_ALLOC", NULL);
@@ -559,7 +559,7 @@ BOOL SelfExtractInMemory (wchar_t *path)
 	bufPos = DecompressedData;
 	bufEndPos = bufPos + uncompressedLen - 1;
 
-	compressedData = LoadFileBlock (path, filePos, compressedLen);
+	compressedData = (unsigned char*)LoadFileBlock (path, filePos, compressedLen);
 
 	if (compressedData == NULL)
 	{

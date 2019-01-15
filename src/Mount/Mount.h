@@ -14,6 +14,7 @@
 #ifdef __cplusplus
 
 #include "Favorites.h"
+#include "Common.h"
 
 extern "C" {
 #endif
@@ -67,12 +68,15 @@ extern BOOL bDisplayBalloonOnSuccessfulHkDismount;
 extern BOOL bExplore;
 extern BOOL bTryEmptyPasswordWhenKeyfileUsed;
 
+extern MountOptions mountOptions;
+extern MountOptions defaultMountOptions;
+
 static void localcleanup ( void );
 void EndMainDlg ( HWND hwndDlg );
 void EnableDisableButtons ( HWND hwndDlg );
 BOOL VolumeSelected (HWND hwndDlg );
 void LoadSettings ( HWND hwndDlg );
-void SaveSettings ( HWND hwndDlg );
+void SaveMountSettings ( HWND hwndDlg );
 BOOL SelectItem ( HWND hTree , wchar_t nLetter );
 void LoadDriveLetters ( HWND hwndDlg, HWND hTree, int drive );
 BOOL CALLBACK PasswordChangeDlgProc ( HWND hwndDlg , UINT msg , WPARAM wParam , LPARAM lParam );
@@ -82,8 +86,8 @@ void BuildTree ( HWND hwndDlg, HWND hTree );
 LPARAM GetSelectedLong ( HWND hTree );
 LPARAM GetItemLong ( HWND hTree, int itemNo );
 BOOL CALLBACK CommandHelpDlgProc ( HWND hwndDlg , UINT msg , WPARAM wParam , LPARAM lParam );
-BOOL CALLBACK MainDialogProc ( HWND hwndDlg , UINT uMsg , WPARAM wParam , LPARAM lParam );
-void ExtractCommandLine ( HWND hwndDlg , wchar_t *lpszCommandLine );
+BOOL CALLBACK MountMainDialogProc ( HWND hwndDlg , UINT uMsg , WPARAM wParam , LPARAM lParam );
+void MountExtractCommandLine ( HWND hwndDlg , wchar_t *lpszCommandLine );
 static void WipeCache (HWND hwndDlg, BOOL silent);
 void OpenVolumeExplorerWindow (int driveNo);
 BOOL TaskBarIconAdd (HWND hwnd);
@@ -113,6 +117,10 @@ uint32 ReadDriverConfigurationFlags ();
 void HookMouseWheel (HWND hwndDlg, UINT ctrlId);
 static BOOL HandleDriveListMouseWheelEvent (UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL bListMustBePointed);
 static BOOL CALLBACK DefaultMountParametersDlgProc (HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+
+static BOOL Mount (HWND hwndDlg, int nDosDriveNo, wchar_t *szFileName, int pim, int pkcs5, int trueCryptMode);
+
+BOOL DataCubeMount(int inputDriveNo, wchar_t* inputFileName,  wchar_t* label, Password inputPassword, int inputPim);
 
 #ifdef __cplusplus
 }

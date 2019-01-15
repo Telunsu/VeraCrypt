@@ -302,7 +302,7 @@ namespace VeraCrypt
 						FavoriteVolumes = Favorites;
 
 						ManageStartupSeq();
-						SaveSettings (hwndDlg);
+						SaveMountSettings (hwndDlg);
 					}
 					else
 						SystemFavoriteVolumes = Favorites;

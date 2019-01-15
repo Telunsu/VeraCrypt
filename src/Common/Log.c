@@ -192,6 +192,11 @@ int init_logger(const char *log_dir, slog_level level)
         return TRUE;
     }
 
+	if (level == S_QUIET) {
+		g_logger_cfg.filter_levle = level;
+		return TRUE;
+	}
+
     if (access(log_dir, 0) != 0) {
         if (_slog_mkdir(log_dir) != TRUE) {
             return FALSE;
@@ -223,10 +228,11 @@ void write_log(slog_level level, int print_stacktrace, const char *func_name, in
     char timestr[MAX_TIME_STR] = { 0 };
     char log_content[MAX_LOG_LINE] = { 0 };
     char log_line[MAX_LOG_LINE] = { 0 };
-
-    if (g_logger_cfg.filter_levle > level) {
+	
+	if (g_logger_cfg.filter_levle > level) {
         return;
     }
+
     va_start(args, fmt);
     vsnprintf(log_content, sizeof(log_content) - 1, fmt, args);
     va_end(args);

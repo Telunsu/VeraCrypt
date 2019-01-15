@@ -40,7 +40,7 @@ BOOL CALLBACK CommandHelpDlgProc (HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM 
 	{
 	case WM_INITDIALOG:
 		{
-		wchar_t * tmp = err_malloc(8192 * sizeof (wchar_t));
+		wchar_t * tmp = (wchar_t*)err_malloc(8192 * sizeof (wchar_t));
 		wchar_t tmp2[MAX_PATH * 2];
 		argumentspec *as;
 		int i;
@@ -109,7 +109,7 @@ int Win32CommandLine (wchar_t ***lpszArgs)
 		return 0;
 	}
 
-	*lpszArgs = malloc (sizeof (wchar_t *) * argumentCount);
+	*lpszArgs = (wchar_t**) malloc (sizeof (wchar_t *) * argumentCount);
 	if (!*lpszArgs)
 		AbortProcess ("OUTOFMEMORY");
 

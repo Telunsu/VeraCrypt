@@ -13,12 +13,14 @@
 #ifndef TC_HEADER_Common_BootEncryption
 #define TC_HEADER_Common_BootEncryption
 
+#include "Apidrvr.h"
 #include "Tcdefs.h"
 #include "Dlgcode.h"
 #include "Exception.h"
 #include "Platform/PlatformBase.h"
 #include "Volumes.h"
 #include <Winternl.h>
+
 
 #define SYSPARTITIONINFORMATION 0x62
 
@@ -235,6 +237,7 @@ namespace VeraCrypt
 	class BootEncryption
 	{
 	public:
+		// BootEncryption (void);
 		BootEncryption (HWND parent, bool postOOBE = false);
 		~BootEncryption ();
 

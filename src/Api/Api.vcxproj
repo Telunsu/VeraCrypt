@@ -1,0 +1,350 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{493DDF50-624F-48BB-B8D9-39221C41999E}</ProjectGuid>
+    <RootNamespace>Api</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <PlatformToolset>Windows7.1SDK</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfAtl>false</UseOfAtl>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>Windows7.1SDK</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</LinkIncremental>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">TrueCryptApi</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">TrueCryptApi</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\Common;..\Crypto;..\;$(PKCS11_INC)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;TRUECRYPT_EXPORTS;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;_CRT_NON_CONFORMING_SWPRINTFS;VOLFORMAT</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DisableSpecificWarnings>4100;4201;4127;4706;4057;4701;4200;</DisableSpecificWarnings>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ErrorReporting>Prompt</ErrorReporting>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>..\Crypto\Debug\Crypto.lib;advapi32.lib;user32.lib;shell32.lib;setupapi.lib</AdditionalDependencies>
+      <OutputFile>$(OutDir)TrueCryptApi.dll</OutputFile>
+      <IgnoreSpecificDefaultLibraries>LIBCMTD</IgnoreSpecificDefaultLibraries>
+      <ModuleDefinitionFile>api.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <TargetMachine>MachineX86</TargetMachine>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>DCUBE_API;WIN32;NDEBUG;_WINDOWS;_USRDLL;TRUECRYPT_EXPORTS;_CRT_SECURE_NO_WARNINGS;VOLFORMAT;UNICODE;_UNICODE;VOLFORMAT;WIN32;HAVE_CONFIG_H;ZIP_STATIC;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_NON_CONFORMING_SWPRINTFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <AdditionalIncludeDirectories>..\Common;..\Crypto;..\;..\PKCS11;..\Mount;..\Common\libzip\;..\Common\zlib\</AdditionalIncludeDirectories>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DisableSpecificWarnings>4100;4201;4127;4706;4057;4701;4200</DisableSpecificWarnings>
+      <ErrorReporting>Prompt</ErrorReporting>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+    </ClCompile>
+    <Link>
+      <ModuleDefinitionFile>api.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+      <OutputFile>$(OutDir)TrueCryptApi.dll</OutputFile>
+      <AdditionalDependencies>..\Crypto\Release\crypto.lib;..\Common\Release\Zip.lib;mpr.lib;DbgHelp.lib;advapi32.lib;user32.lib;shell32.lib;setupapi.lib;gdi32.lib;Comdlg32.lib;winspool.lib</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries>LIBCMT.lib</IgnoreSpecificDefaultLibraries>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DelayLoadDLLs>mpr.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Common\Apidrvr.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsCpp</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\BaseCom.cpp" />
+    <ClCompile Include="..\Common\BootEncryption.cpp" />
+    <ClCompile Include="..\Common\Cache.c" />
+    <ClCompile Include="..\Common\Cmdline.c" />
+    <ClCompile Include="..\Common\Combo.c" />
+    <ClCompile Include="..\Common\Crc.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Crypto.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Dictionary.c" />
+    <ClCompile Include="..\Common\Dlgcode.c" />
+    <ClCompile Include="..\Common\EncryptionThreadPool.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Endian.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Errors.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
+    </ClCompile>
+    <ClCompile Include="..\Common\Fat.c" />
+    <ClCompile Include="..\Common\Format.c" />
+    <ClCompile Include="..\Common\GfMul.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Keyfiles.c" />
+    <ClCompile Include="..\Common\Language.c" />
+    <ClCompile Include="..\Common\Log.c" />
+    <ClCompile Include="..\Common\Options.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsCpp</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Password.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Pkcs5.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Progress.c" />
+    <ClCompile Include="..\Common\Random.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Registry.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\SecurityToken.cpp" />
+    <ClCompile Include="..\Common\Strings.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsCpp</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Tests.c" />
+    <ClCompile Include="..\Common\Uac.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Volumes.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Wipe.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Xml.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Common\Xts.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\Format\FormatCom.cpp" />
+    <ClCompile Include="..\Format\InPlace.c" />
+    <ClCompile Include="..\Format\Tcformat.c" />
+    <ClCompile Include="..\Mount\Favorites.cpp" />
+    <ClCompile Include="..\Mount\Hotkeys.c" />
+    <ClCompile Include="..\Mount\MainCom.cpp" />
+    <ClCompile Include="..\Mount\Mount.c" />
+    <ClCompile Include="..\Setup\SelfExtract.c" />
+    <ClCompile Include="Api.c">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsCpp</CompileAs>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="dllmain.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Boot\Windows\BootCommon.h" />
+    <ClInclude Include="..\Boot\Windows\BootDefs.h" />
+    <ClInclude Include="..\Common\Apidrvr.h" />
+    <ClInclude Include="..\Common\BaseCom.h" />
+    <ClInclude Include="..\Common\BootEncryption.h" />
+    <ClInclude Include="..\Common\Cache.h" />
+    <ClInclude Include="..\Common\Cmdline.h" />
+    <ClInclude Include="..\Common\Combo.h" />
+    <ClInclude Include="..\Common\Common.h" />
+    <ClInclude Include="..\Common\Crc.h" />
+    <ClInclude Include="..\Common\Crypto.h" />
+    <ClInclude Include="..\Common\Dictionary.h" />
+    <ClInclude Include="..\Common\Dlgcode.h" />
+    <ClInclude Include="..\Common\EncryptionThreadPool.h" />
+    <ClInclude Include="..\Common\Endian.h" />
+    <ClInclude Include="..\Common\Errors.h" />
+    <ClInclude Include="..\Common\Exception.h" />
+    <ClInclude Include="..\Common\Fat.h" />
+    <ClInclude Include="..\Common\Format.h" />
+    <ClInclude Include="..\Common\GfMul.h" />
+    <ClInclude Include="..\Common\Inflate.h" />
+    <ClInclude Include="..\Common\Keyfiles.h" />
+    <ClInclude Include="..\Common\Language.h" />
+    <ClInclude Include="..\Common\Log.h" />
+    <ClInclude Include="..\Common\Options.h" />
+    <ClInclude Include="..\Common\Password.h" />
+    <ClInclude Include="..\Common\Pkcs5.h" />
+    <ClInclude Include="..\Common\Progress.h" />
+    <ClInclude Include="..\Common\Random.h" />
+    <ClInclude Include="..\Common\Registry.h" />
+    <ClInclude Include="..\Common\Resource.h" />
+    <ClInclude Include="..\Common\SecurityToken.h" />
+    <ClInclude Include="..\Common\Strings.h" />
+    <ClInclude Include="..\Common\Tcdefs.h" />
+    <ClInclude Include="..\Common\Tests.h" />
+    <ClInclude Include="..\Common\Uac.h" />
+    <ClInclude Include="..\Common\Volumes.h" />
+    <ClInclude Include="..\Common\Wipe.h" />
+    <ClInclude Include="..\Common\Xml.h" />
+    <ClInclude Include="..\Common\Xts.h" />
+    <ClInclude Include="..\Common\zlib\zlib.h" />
+    <ClInclude Include="..\Format\InPlace.h" />
+    <ClInclude Include="..\Format\Tcformat.h" />
+    <ClInclude Include="..\Mount\Favorites.h" />
+    <ClInclude Include="..\Mount\Hotkeys.h" />
+    <ClInclude Include="..\Mount\MainCom.h" />
+    <ClInclude Include="..\Mount\Mount.h" />
+    <ClInclude Include="..\Platform\Buffer.h" />
+    <ClInclude Include="..\Platform\Directory.h" />
+    <ClInclude Include="..\Platform\Event.h" />
+    <ClInclude Include="..\Platform\Exception.h" />
+    <ClInclude Include="..\Platform\File.h" />
+    <ClInclude Include="..\Platform\FileStream.h" />
+    <ClInclude Include="..\Platform\FilesystemPath.h" />
+    <ClInclude Include="..\Platform\Finally.h" />
+    <ClInclude Include="..\Platform\ForEach.h" />
+    <ClInclude Include="..\Platform\Functor.h" />
+    <ClInclude Include="..\Platform\Memory.h" />
+    <ClInclude Include="..\Platform\MemoryStream.h" />
+    <ClInclude Include="..\Platform\Mutex.h" />
+    <ClInclude Include="..\Platform\Platform.h" />
+    <ClInclude Include="..\Platform\PlatformBase.h" />
+    <ClInclude Include="..\Platform\PlatformTest.h" />
+    <ClInclude Include="..\Platform\Serializable.h" />
+    <ClInclude Include="..\Platform\Serializer.h" />
+    <ClInclude Include="..\Platform\SerializerFactory.h" />
+    <ClInclude Include="..\Platform\SharedPtr.h" />
+    <ClInclude Include="..\Platform\SharedVal.h" />
+    <ClInclude Include="..\Platform\Stream.h" />
+    <ClInclude Include="..\Platform\StringConverter.h" />
+    <ClInclude Include="..\Platform\SyncEvent.h" />
+    <ClInclude Include="..\Platform\System.h" />
+    <ClInclude Include="..\Platform\SystemException.h" />
+    <ClInclude Include="..\Platform\SystemInfo.h" />
+    <ClInclude Include="..\Platform\SystemLog.h" />
+    <ClInclude Include="..\Platform\TextReader.h" />
+    <ClInclude Include="..\Platform\Thread.h" />
+    <ClInclude Include="..\Platform\Time.h" />
+    <ClInclude Include="..\Platform\User.h" />
+    <ClInclude Include="..\Setup\SelfExtract.h" />
+    <ClInclude Include="Api.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Boot\Windows\Release\BootLoader.com.gz" />
+    <None Include="..\Boot\Windows\Release\BootSector.bin" />
+    <None Include="..\Boot\Windows\Release\Decompressor.com" />
+    <None Include="..\Boot\Windows\Release_AES\BootLoader.com.gz" />
+    <None Include="..\Boot\Windows\Release_AES\BootSector.bin" />
+    <None Include="..\Boot\Windows\Release_Serpent\BootLoader.com.gz" />
+    <None Include="..\Boot\Windows\Release_Serpent\BootSector.bin" />
+    <None Include="..\Boot\Windows\Release_Twofish\BootLoader.com.gz" />
+    <None Include="..\Boot\Windows\Release_Twofish\BootSector.bin" />
+    <None Include="..\Boot\Windows\Rescue\BootLoader.com.gz" />
+    <None Include="..\Boot\Windows\Rescue\BootSector.bin" />
+    <None Include="..\Boot\Windows\Rescue_AES\BootLoader.com.gz" />
+    <None Include="..\Boot\Windows\Rescue_AES\BootSector.bin" />
+    <None Include="..\Boot\Windows\Rescue_Serpent\BootLoader.com.gz" />
+    <None Include="..\Boot\Windows\Rescue_Serpent\BootSector.bin" />
+    <None Include="..\Boot\Windows\Rescue_Twofish\BootLoader.com.gz" />
+    <None Include="..\Boot\Windows\Rescue_Twofish\BootSector.bin" />
+    <None Include="Api.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Crypto\Crypto.vcxproj">
+      <Project>{993245cf-6b70-47ee-91bb-39f8fc6dc0e7}</Project>
+      <Private>true</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\Common\Common.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

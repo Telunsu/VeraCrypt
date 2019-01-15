@@ -65,14 +65,14 @@ static char *MapFirstLanguageFile ()
 	if (LanguageResource == NULL)
 	{
 		DWORD size;
-		LanguageResource = MapResource (L"Xml", IDR_LANGUAGE, &size);
+		LanguageResource = (char *)MapResource (L"Xml", IDR_LANGUAGE, &size);
 		if (LanguageResource)
 			LanguageResourceSize = size;
 	}
 
 	if (LanguageResource)
 	{
-		LanguageFileBuffer = malloc(LanguageResourceSize + 1);
+		LanguageFileBuffer = (char*)malloc(LanguageResourceSize + 1);
 		if (LanguageFileBuffer)
 		{
 			memcpy (LanguageFileBuffer, LanguageResource, LanguageResourceSize);
@@ -122,7 +122,7 @@ static char *MapNextLanguageFile (int resourceid)
 		if (LanguageFileFindHandle == INVALID_HANDLE_VALUE) return NULL;
 		if (find.nFileSizeHigh != 0) return NULL;
 
-		LanguageFileBuffer = malloc(find.nFileSizeLow + 1);
+		LanguageFileBuffer = (char *)malloc(find.nFileSizeLow + 1);
 		if (LanguageFileBuffer == NULL) return NULL;
 
 		GetModuleFileNameW (NULL, f, sizeof (f) / sizeof(f[0]));
@@ -163,13 +163,13 @@ static char *MapNextLanguageFile (int resourceid)
 
 		LanguageResourceId = resourceid;
 
-		LanguageResource = MapResource (L"Languages", LanguageResourceId, &size);
+		LanguageResource = (char *)MapResource (L"Languages", LanguageResourceId, &size);
 		if (LanguageResource)
 			LanguageResourceSize = size;
 
 		if (LanguageResource)
 		{
-			LanguageFileBuffer = malloc(LanguageResourceSize + 1);
+			LanguageFileBuffer = (char *)malloc(LanguageResourceSize + 1);
 			if (LanguageFileBuffer)
 			{
 				memcpy (LanguageFileBuffer, LanguageResource, LanguageResourceSize);
@@ -214,7 +214,7 @@ static BOOL LoadLanguageData (int resourceid, BOOL bForceSetPreferredLanguage, B
 		StringCbCopyA (langId, sizeof(langId), PreferredLangId);
 
 	// Parse all available language files until preferred language is found
-	for (res = MapFirstLanguageFile (); res != NULL; res = MapNextLanguageFile (resourceid))
+	for (res = (BYTE*)MapFirstLanguageFile (); res != NULL; res = (BYTE*)MapNextLanguageFile (resourceid))
 	{
 		xml = (char *) res;
 		xml = XmlFindElement (xml, "localization");
@@ -276,7 +276,7 @@ static BOOL LoadLanguageData (int resourceid, BOOL bForceSetPreferredLanguage, B
 				XmlGetAttributeText (xml, "face", attr, sizeof (attr));
 
 				len = MultiByteToWideChar (CP_UTF8, 0, attr, -1, wattr, sizeof (wattr) / sizeof(wattr[0]));
-				font.FaceName = AddPoolData ((void *) wattr, len * 2);
+				font.FaceName = (wchar_t*)AddPoolData ((void *) wattr, len * 2);
 
 				XmlGetAttributeText (xml, "size", attr, sizeof (attr));
 				sscanf (attr, "%d", &font.Size);
@@ -284,7 +284,7 @@ static BOOL LoadLanguageData (int resourceid, BOOL bForceSetPreferredLanguage, B
 				StringCbCopyA (attr, sizeof(attr), "font_");
 				XmlGetAttributeText (xml, "class", attr + 5, sizeof (attr) - 5);
 				AddDictionaryEntry (
-					AddPoolData ((void *) attr, strlen (attr) + 1), 0,
+					(char*)AddPoolData ((void *) attr, strlen (attr) + 1), 0,
 					AddPoolData ((void *) &font, sizeof(font)));
 			}
 
@@ -326,7 +326,7 @@ static BOOL LoadLanguageData (int resourceid, BOOL bForceSetPreferredLanguage, B
 									case 'n': *out++ = 13; *out++ = 10; break;
 									default:
 										if (!bForceSilent)
-											MessageBoxA (0, key, "VeraCrypt: Unknown '\\' escape sequence in string", MB_ICONERROR);
+											MessageBoxA (0, (LPCSTR)key, "VeraCrypt: Unknown '\\' escape sequence in string", MB_ICONERROR);
 										return FALSE;
 									}
 								}
@@ -341,7 +341,7 @@ static BOOL LoadLanguageData (int resourceid, BOOL bForceSetPreferredLanguage, B
 						if (len == 0)
 						{
 							if (!bForceSilent)
-								MessageBoxA (0, key, "VeraCrypt: Error while decoding UTF-8 string", MB_ICONERROR);
+								MessageBoxA (0, (LPCSTR)key, "VeraCrypt: Error while decoding UTF-8 string", MB_ICONERROR);
 							return FALSE;
 						}
 
@@ -386,7 +386,7 @@ static BOOL LoadLanguageData (int resourceid, BOOL bForceSetPreferredLanguage, B
 	{
 		if (HeaderResource[i] == NULL)
 		{
-			HeaderResource[i] = MapResource (L"Header", headers[i], &size);
+			HeaderResource[i] = (char *)MapResource (L"Header", headers[i], &size);
 			if (HeaderResource[i])
 				HeaderResourceSize[i] = size;
 		}

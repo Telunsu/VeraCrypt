@@ -11,6 +11,9 @@
  contained in the file License.txt included in VeraCrypt binary and source
  code distribution packages. */
 
+#ifndef __COMMON_CMDLINE_H__
+#define __COMMON_CMDLINE_H__
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,3 +44,6 @@ int GetArgumentValue ( wchar_t **lpszCommandLineArgs , int *nArgIdx , int nNoCom
 #ifdef __cplusplus
 }
 #endif
+
+
+#endif // __COMMON_CMDLINE_H__

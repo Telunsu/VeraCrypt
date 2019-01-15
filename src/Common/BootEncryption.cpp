@@ -728,7 +728,7 @@ namespace VeraCrypt
 
 	File::File (wstring path, bool readOnly, bool create) : Elevated (false), FileOpen (false), ReadOnly (readOnly), LastError(0)
 	{
-		Handle = CreateFile (path.c_str(),
+		Handle = CreateFileW (path.c_str(),
 			readOnly ? GENERIC_READ : GENERIC_READ | GENERIC_WRITE,
 			FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, create ? CREATE_ALWAYS : OPEN_EXISTING,
 			FILE_FLAG_RANDOM_ACCESS | FILE_FLAG_WRITE_THROUGH, NULL);
@@ -988,7 +988,7 @@ namespace VeraCrypt
 
 	void Show (HWND parent, const wstring &str)
 	{
-		MessageBox (parent, str.c_str(), NULL, 0);
+		MessageBoxW (parent, str.c_str(), NULL, 0);
 	}
 
 
@@ -997,7 +997,7 @@ namespace VeraCrypt
 		 FileOpen = false;
 		 Elevated = false;
 
-		Handle = CreateFile ((wstring (L"\\\\.\\") + path).c_str(),
+		Handle = CreateFileW ((wstring (L"\\\\.\\") + path).c_str(),
 			readOnly ? GENERIC_READ : GENERIC_READ | GENERIC_WRITE,
 			FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
 			FILE_FLAG_RANDOM_ACCESS | FILE_FLAG_WRITE_THROUGH, NULL);
@@ -1231,7 +1231,7 @@ namespace VeraCrypt
 
 		finally_do_arg (SC_HANDLE, serviceManager, { CloseServiceHandle (finally_arg); });
 
-		SC_HANDLE service = OpenService (serviceManager, L"veracrypt", SERVICE_CHANGE_CONFIG);
+		SC_HANDLE service = OpenServiceW (serviceManager, L"veracrypt", SERVICE_CHANGE_CONFIG);
 		throw_sys_if (!service);
 
 		finally_do_arg (SC_HANDLE, service, { CloseServiceHandle (finally_arg); });
@@ -1247,11 +1247,11 @@ namespace VeraCrypt
 			wstring path (GetWindowsDirectory());
 			path += L"\\drivers\\veracrypt.sys";
 
-			if (GetVolumePathName (path.c_str(), pathBuf, ARRAYSIZE (pathBuf))
-				&& GetVolumeInformation (pathBuf, NULL, 0, NULL, NULL, NULL, filesystem, ARRAYSIZE(filesystem))
+			if (GetVolumePathNameW (path.c_str(), pathBuf, ARRAYSIZE (pathBuf))
+				&& GetVolumeInformationW (pathBuf, NULL, 0, NULL, NULL, NULL, filesystem, ARRAYSIZE(filesystem))
 				&& wmemcmp (filesystem, L"FAT", 3) == 0)
 			{
-				throw_sys_if (GetShortPathName (path.c_str(), pathBuf, ARRAYSIZE (pathBuf)) == 0);
+				throw_sys_if (GetShortPathNameW (path.c_str(), pathBuf, ARRAYSIZE (pathBuf)) == 0);
 
 				// Convert absolute path to relative to the Windows directory
 				driverPath = pathBuf;
@@ -1259,7 +1259,7 @@ namespace VeraCrypt
 			}
 		}
 
-		throw_sys_if (!ChangeServiceConfig (service, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE,
+		throw_sys_if (!ChangeServiceConfigW (service, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE,
 			startOnBoot ? SERVICE_ERROR_SEVERE : SERVICE_ERROR_NORMAL,
 			driverPath.empty() ? NULL : driverPath.c_str(),
 			startOnBoot ? L"Filter" : NULL,
@@ -1392,7 +1392,7 @@ namespace VeraCrypt
 	wstring BootEncryption::GetWindowsDirectory ()
 	{
 		wchar_t buf[MAX_PATH];
-		throw_sys_if (GetSystemDirectory (buf, ARRAYSIZE (buf)) == 0);
+		throw_sys_if (GetSystemDirectoryW (buf, ARRAYSIZE (buf)) == 0);
 
 		return wstring (buf);
 	}
@@ -2407,7 +2407,7 @@ namespace VeraCrypt
 			// Load NtQuerySystemInformation function point
 			if (!NtQuerySystemInformationPtr)
 			{
-				NtQuerySystemInformationPtr = (NtQuerySystemInformationFn) GetProcAddress (GetModuleHandle (L"ntdll.dll"), "NtQuerySystemInformation");
+				NtQuerySystemInformationPtr = (NtQuerySystemInformationFn) GetProcAddress (GetModuleHandleW (L"ntdll.dll"), "NtQuerySystemInformation");
 				if (!NtQuerySystemInformationPtr)
 					throw SystemException (SRC_POS);
 			}
@@ -2506,7 +2506,7 @@ namespace VeraCrypt
 		// Load NtQuerySystemInformation function point
 		if (!NtQuerySystemInformationPtr)
 		{
-			NtQuerySystemInformationPtr = (NtQuerySystemInformationFn) GetProcAddress (GetModuleHandle (L"ntdll.dll"), "NtQuerySystemInformation");
+			NtQuerySystemInformationPtr = (NtQuerySystemInformationFn) GetProcAddress (GetModuleHandleW (L"ntdll.dll"), "NtQuerySystemInformation");
 			if (!NtQuerySystemInformationPtr)
 				throw SystemException (SRC_POS);
 		}
@@ -2544,7 +2544,7 @@ namespace VeraCrypt
 		}
 		EfiBootPartPath[1] = ':';
 		EfiBootPartPath[2] = 0;
-		throw_sys_if(!DefineDosDevice(DDD_RAW_TARGET_PATH, EfiBootPartPath, BootVolumePath));		
+		throw_sys_if(!DefineDosDeviceW(DDD_RAW_TARGET_PATH, EfiBootPartPath, BootVolumePath));		
 
 		Device  dev(EfiBootPartPath, TRUE);
 
@@ -2554,7 +2554,7 @@ namespace VeraCrypt
 		}
 		catch (...)
 		{
-			DefineDosDevice(DDD_REMOVE_DEFINITION, EfiBootPartPath, NULL);
+			DefineDosDeviceW(DDD_REMOVE_DEFINITION, EfiBootPartPath, NULL);
 			throw;
 		}
 		
@@ -2564,7 +2564,7 @@ namespace VeraCrypt
 		dev.Close();
 		if (!bSuccess)
 		{
-			DefineDosDevice(DDD_REMOVE_DEFINITION, EfiBootPartPath, NULL);
+			DefineDosDeviceW(DDD_REMOVE_DEFINITION, EfiBootPartPath, NULL);
 			SetLastError (dwLastError);
 			throw SystemException(SRC_POS);
 		}
@@ -2575,14 +2575,14 @@ namespace VeraCrypt
 	void EfiBoot::DismountBootPartition() {
 		if (m_bMounted)
 		{
-			DefineDosDevice(DDD_REMOVE_DEFINITION, EfiBootPartPath, NULL);
+			DefineDosDeviceW(DDD_REMOVE_DEFINITION, EfiBootPartPath, NULL);
 			m_bMounted = false;
 		}
 	}
 
 	bool EfiBoot::IsEfiBoot() {
 		DWORD BootOrderLen;
-		BootOrderLen = GetFirmwareEnvironmentVariable(L"BootOrder", EfiVarGuid, tempBuf, sizeof(tempBuf));
+		BootOrderLen = GetFirmwareEnvironmentVariableW(L"BootOrder", EfiVarGuid, tempBuf, sizeof(tempBuf));
 		return BootOrderLen != 0;
 	}
 
@@ -2594,11 +2594,11 @@ namespace VeraCrypt
 		}
 		wchar_t	varName[256];
 		StringCchPrintfW(varName, ARRAYSIZE (varName), L"%s%04X", type == NULL ? L"Boot" : type, statrtOrderNum);
-		SetFirmwareEnvironmentVariable(varName, EfiVarGuid, NULL, 0);
+		SetFirmwareEnvironmentVariableW(varName, EfiVarGuid, NULL, 0);
 
 		wstring order = L"Order";
 		order.insert(0, type == NULL ? L"Boot" : type);
-		uint32 startOrderLen = GetFirmwareEnvironmentVariable(order.c_str(), EfiVarGuid, tempBuf, sizeof(tempBuf));
+		uint32 startOrderLen = GetFirmwareEnvironmentVariableW(order.c_str(), EfiVarGuid, tempBuf, sizeof(tempBuf));
 		uint32 startOrderNumPos = UINT_MAX;
 		bool	startOrderUpdate = false;
 		uint16*	startOrder = (uint16*)tempBuf;
@@ -2619,18 +2619,18 @@ namespace VeraCrypt
 		}
 
 		if (startOrderUpdate) {
-			SetFirmwareEnvironmentVariable(order.c_str(), EfiVarGuid, startOrder, startOrderLen);
+			SetFirmwareEnvironmentVariableW(order.c_str(), EfiVarGuid, startOrder, startOrderLen);
 
 			// remove ourselves from BootNext value
 			uint16 bootNextValue = 0;
 			wstring next = L"Next";
 			next.insert(0, type == NULL ? L"Boot" : type);
 
-			if (	(GetFirmwareEnvironmentVariable(next.c_str(), EfiVarGuid, &bootNextValue, 2) == 2)
+			if (	(GetFirmwareEnvironmentVariableW(next.c_str(), EfiVarGuid, &bootNextValue, 2) == 2)
 				&&	(bootNextValue == statrtOrderNum)
 				)
 			{
-				SetFirmwareEnvironmentVariable(next.c_str(), EfiVarGuid, startOrder, 0);
+				SetFirmwareEnvironmentVariableW(next.c_str(), EfiVarGuid, startOrder, 0);
 			}
 		}
 	}
@@ -2725,14 +2725,14 @@ namespace VeraCrypt
 		// Set variable
 		wchar_t	varName[256];
 		StringCchPrintfW(varName, ARRAYSIZE (varName), L"%s%04X", type == NULL ? L"Boot" : type, statrtOrderNum);
-		SetFirmwareEnvironmentVariable(varName, EfiVarGuid, startVar, varSize);
+		SetFirmwareEnvironmentVariableW(varName, EfiVarGuid, startVar, varSize);
 		delete [] startVar;
 
 		// Update order
 		wstring order = L"Order";
 		order.insert(0, type == NULL ? L"Boot" : type);
 
-		uint32 startOrderLen = GetFirmwareEnvironmentVariable(order.c_str(), EfiVarGuid, tempBuf, sizeof(tempBuf));
+		uint32 startOrderLen = GetFirmwareEnvironmentVariableW(order.c_str(), EfiVarGuid, tempBuf, sizeof(tempBuf));
 		uint32 startOrderNumPos = UINT_MAX;
 		bool	startOrderUpdate = false;
 		uint16*	startOrder = (uint16*)tempBuf;
@@ -2760,14 +2760,14 @@ namespace VeraCrypt
 		}
 
 		if (startOrderUpdate) {
-			SetFirmwareEnvironmentVariable(order.c_str(), EfiVarGuid, startOrder, startOrderLen);
+			SetFirmwareEnvironmentVariableW(order.c_str(), EfiVarGuid, startOrder, startOrderLen);
 		}
 
 		// set BootNext value
 		wstring next = L"Next";
 		next.insert(0, type == NULL ? L"Boot" : type);
 
-		SetFirmwareEnvironmentVariable(next.c_str(), EfiVarGuid, &statrtOrderNum, 2);
+		SetFirmwareEnvironmentVariableW(next.c_str(), EfiVarGuid, &statrtOrderNum, 2);
 
 	}
 
@@ -2831,14 +2831,14 @@ namespace VeraCrypt
 	BOOL EfiBoot::DelFile(const wchar_t* name) {
 		wstring path = EfiBootPartPath;
 		path += name;
-		return DeleteFile(path.c_str());
+		return DeleteFileW(path.c_str());
 	}
 
 	BOOL EfiBoot::MkDir(const wchar_t* name, bool& bAlreadyExists) {
 		wstring path = EfiBootPartPath;
 		path += name;
 		bAlreadyExists = false;
-		BOOL bRet = CreateDirectory(path.c_str(), NULL);
+		BOOL bRet = CreateDirectoryW(path.c_str(), NULL);
 		if (!bRet && (GetLastError () == ERROR_ALREADY_EXISTS))
 		{
 			bRet = TRUE;

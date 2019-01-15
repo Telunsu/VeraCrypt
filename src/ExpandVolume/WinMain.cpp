@@ -46,6 +46,8 @@
 #include "../Common/Common.h"
 #include "../Common/Resource.h"
 #include "../Common/SecurityToken.h"
+#include "../Common/CmdLine.h"
+#include "../Common/Log.h"
 #include "../Platform/Finally.h"
 #include "../Platform/ForEach.h"
 #include <Strsafe.h>
@@ -139,6 +141,8 @@ static KeyFilesDlgParam				hidVolProtKeyFilesParam;
 VOLUME_NOTIFICATIONS_LIST	VolumeNotificationsList;
 
 static int bPrebootPasswordDlgMode = FALSE;
+
+unsigned __int64 CmdExpandVolumeFileSize = 0;
 
 static void localcleanup (void)
 {
@@ -863,6 +867,118 @@ static BOOL SelectPartition (HWND hwndDlg)
 	return FALSE;
 }
 
+void ExtractCommandLine (HWND hwndDlg, wchar_t *lpszCommandLine) {
+	wchar_t **lpszCommandLineArgs = NULL;	/* Array of command line arguments */
+	int nNoCommandLineArgs;	/* The number of arguments in the array */
+	wchar_t tmpPath[MAX_PATH * 2];
+
+	/* Extract command line arguments */
+	int NoCmdLineArgs = nNoCommandLineArgs = Win32CommandLine (&lpszCommandLineArgs);
+
+	if (nNoCommandLineArgs > 0)
+	{
+		int i;
+
+		for (i = 0; i < nNoCommandLineArgs; i++)
+		{
+			enum
+			{
+				OptionPassword,
+				OptionSize,
+			};
+
+			argument args[]=
+			{
+				{ OptionPassword, L"/password",	L"/p", FALSE },
+				{ OptionSize, L"/size", NULL, FALSE },
+			};
+
+			argumentspec as;
+
+			as.args = args;
+			as.arg_cnt = sizeof(args)/ sizeof(args[0]);
+
+			switch (GetArgumentID (&as, lpszCommandLineArgs[i]))
+			{
+			case OptionPassword:
+				{
+					wchar_t szTmp[MAX_PASSWORD + 1];
+					if (HAS_ARGUMENT == GetArgumentValue (lpszCommandLineArgs, &i, nNoCommandLineArgs,
+								  szTmp, ARRAYSIZE (szTmp)))
+					{
+						int iLen = WideCharToMultiByte (CP_UTF8, 0, szTmp, -1, (char*) CmdVolumePassword.Text, MAX_PASSWORD + 1, NULL, NULL);
+						burn (szTmp, sizeof (szTmp));
+						if (iLen > 0)
+						{
+							CmdVolumePassword.Length = (unsigned __int32) (iLen - 1);
+							CmdVolumePasswordValid = TRUE;
+						}
+						else
+							AbortProcess ("COMMAND_LINE_ERROR");
+					}
+					else
+						AbortProcess ("COMMAND_LINE_ERROR");
+				}
+				break;
+
+			case OptionSize:
+				{
+					wchar_t szTmp[32] = {0};
+					if (HAS_ARGUMENT == GetArgumentValue (lpszCommandLineArgs,
+									&i, nNoCommandLineArgs, szTmp, ARRAYSIZE (szTmp))
+						 && (wcslen (szTmp) >= 2)
+						)
+					{
+						/* size can be expressed in bytes or with suffixes K, M,G or T
+						 * to indicate the unit to use
+						 */
+						unsigned __int64 multiplier;
+						wchar_t* endPtr = NULL;
+						wchar_t lastChar = szTmp [wcslen (szTmp) - 1];
+						if (lastChar >= L'0' && lastChar <= L'9')
+							multiplier = 1;
+						else if (lastChar == L'K' || lastChar == L'k')
+							multiplier = BYTES_PER_KB;
+						else if (lastChar == L'M' || lastChar == L'm')
+							multiplier = BYTES_PER_MB;
+						else if (lastChar == L'G' || lastChar == L'g')
+							multiplier = BYTES_PER_GB;
+						else if (lastChar == L'T' || lastChar == L't')
+							multiplier = BYTES_PER_TB;
+						else
+							AbortProcess ("COMMAND_LINE_ERROR");
+
+						if (multiplier != 1)
+							szTmp [wcslen (szTmp) - 1] = 0;
+
+						CmdExpandVolumeFileSize = _wcstoui64(szTmp, &endPtr, 0);
+						if (CmdExpandVolumeFileSize == 0 || CmdExpandVolumeFileSize == _UI64_MAX
+							|| endPtr == szTmp || *endPtr != L'\0')
+						{
+							AbortProcess ("COMMAND_LINE_ERROR");
+						}
+
+						CmdExpandVolumeFileSize *= multiplier;
+					}
+					else
+						AbortProcess ("COMMAND_LINE_ERROR");
+				}
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	/* Free up the command line arguments */
+	while (--nNoCommandLineArgs >= 0)
+	{
+		free (lpszCommandLineArgs[nNoCommandLineArgs]);
+	}
+
+	if (lpszCommandLineArgs)
+		free (lpszCommandLineArgs);
+}
 
 /* Except in response to the WM_INITDIALOG and WM_ENDSESSION messages, the dialog box procedure
    should return nonzero if it processes a message, and zero if it does not. */

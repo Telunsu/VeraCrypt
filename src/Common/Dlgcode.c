@@ -4539,14 +4539,16 @@ load:
 				hDriver = CreateFile (WIN32_ROOT_PREFIX, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 			}
 
-			if (bPortableModeConfirmed)
+			if (bPortableModeConfirmed) {
 				NotifyDriverOfPortableMode ();
+			}
 		}
 
 #endif	// #ifndef SETUP
 
-		if (hDriver == INVALID_HANDLE_VALUE)
+		if (hDriver == INVALID_HANDLE_VALUE) {
 			return ERR_OS_ERROR;
+		}
 	}
 
 	CloseDriverSetupMutex ();
@@ -4557,19 +4559,23 @@ load:
 
 		BOOL bResult = DeviceIoControl (hDriver, TC_IOCTL_GET_DRIVER_VERSION, NULL, 0, &DriverVersion, sizeof (DriverVersion), &dwResult, NULL);
 
-		if (!bResult)
-			bResult = DeviceIoControl (hDriver, TC_IOCTL_LEGACY_GET_DRIVER_VERSION, NULL, 0, &DriverVersion, sizeof (DriverVersion), &dwResult, NULL);
+		if (!bResult) {
 
+			bResult = DeviceIoControl (hDriver, TC_IOCTL_LEGACY_GET_DRIVER_VERSION, NULL, 0, &DriverVersion, sizeof (DriverVersion), &dwResult, NULL);
+		}
 #ifndef SETUP // Don't check version during setup to allow removal of another version
 		if (bResult == FALSE)
 		{
+			SLOG_TRACE("bResult is false");
+
 			return ERR_OS_ERROR;
 		}
 		else if (DriverVersion != VERSION_NUM)
 		{
 			// Unload an incompatbile version of the driver loaded in non-install mode and load the required version
-			if (IsNonInstallMode () && CreateDriverSetupMutex () && DriverUnload () && nLoadRetryCount++ < 3)
+			if (IsNonInstallMode () && CreateDriverSetupMutex () && DriverUnload () && nLoadRetryCount++ < 3) {
 				goto load;
+			}
 
 			CloseDriverSetupMutex ();
 			CloseHandle (hDriver);
@@ -7966,7 +7972,6 @@ static BOOL PerformMountIoctl (MOUNT_STRUCT* pmount, LPDWORD pdwResult, BOOL use
 	SLOG_TRACE("Start DeviceIoControl.");
 	ret = DeviceIoControl (hDriver, TC_IOCTL_MOUNT_VOLUME, pmount,
 			sizeof (MOUNT_STRUCT), pmount, sizeof (MOUNT_STRUCT), pdwResult, NULL);
-	SLOG_TRACE("End DeviceIoControl, ret = %s", ((ret == TRUE) ? "TRUE" : "FALSE"));
 	return ret;
 }
 
@@ -8041,7 +8046,7 @@ int MountVolume (HWND hwndDlg,
 	}
 #endif
 
-	SLOG_TRACE("[MountVolume] Start IsMountedVolume");
+	SLOG_TRACE("[MountVolume] Start IsMountedVolume, volumePath = %ls", volumePath);
 	if (IsMountedVolume (volumePath))
 	{
 		SLOG_TRACE("[MountVolume] VOL_ALREADY_MOUNTED, volumePath = %ls", volumePath);
@@ -8079,10 +8084,11 @@ retry:
 
 	mount.bPartitionInInactiveSysEncScope = FALSE;
 
-	if (password != NULL)
+	if (password != NULL) {
 		mount.VolumePassword = *password;
-	else
+	} else {
 		mount.VolumePassword.Length = 0;
+	}
 
 	if (!mountOptions->ReadOnly && mountOptions->ProtectHiddenVolume)
 	{
@@ -8265,7 +8271,6 @@ retry:
 	{
 		SLOG_TRACE("[MountVolume] Start PerformMountIoctl");
 		bResult = PerformMountIoctl (&mount, &dwResult, useVolumeID, volumeID);
-		SLOG_TRACE("[MountVolume] End PerformMountIoctl");
 
 		dwLastError = GetLastError ();
 	}
@@ -13317,17 +13322,12 @@ BOOL TranslateVolumeID (HWND hwndDlg, wchar_t* pathValue, size_t cchPathValue)
 				StringCchCopyW (pathValue, cchPathValue, devicePath.c_str());
 			else
 			{
-				if (!Silent && !MultipleMountOperationInProgress)
-					Error ("VOLUME_ID_NOT_FOUND", hwndDlg);
 				SetLastError (ERROR_PATH_NOT_FOUND);
 				bRet = FALSE;
 			}
 		}
 		else
 		{
-			if (!Silent)
-				Error ("VOLUME_ID_INVALID", hwndDlg);
-
 			SetLastError (ERROR_INVALID_PARAMETER);
 			bRet = FALSE;
 		}

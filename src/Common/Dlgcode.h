@@ -245,6 +245,11 @@ typedef struct
 #define	ISO_BURNER_TOOL L"isoburn.exe"
 #define PRINT_TOOL L"notepad.exe"
 
+
+static int DriverLoad (void);
+BOOL DriverUnload (void);
+
+
 void InitGlobalLocks ();
 void FinalizeGlobalLocks ();
 void cleanup ( void );

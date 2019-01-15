@@ -11,6 +11,8 @@
  contained in the file License.txt included in VeraCrypt binary and source
  code distribution packages. */
 
+#ifndef APIDRVR_H
+#define APIDRVR_H
 #pragma once
 
 #include "Tcdefs.h"
@@ -414,4 +416,12 @@ typedef struct
 #define VC_DRIVER_CONFIG_BLOCK_SYS_TRIM								0x100
 #define VC_DRIVER_CONFIG_ALLOW_WINDOWS_DEFRAG						0x200
 
+#ifdef __cplusplus
+extern "C" {
+	// BOOL InitBootEncryption();
+}
+#endif
+
 #endif		/* _WIN32 */
+
+#endif

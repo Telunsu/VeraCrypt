@@ -1,0 +1,8 @@
+Debug/*.obj
+Release/*.obj
+*Release/
+*Debug/
+src/Boot/Windows/Release*
+src/Boot/Windows/Release_AES/*
+*.obj
+src/Boot/Windows/Rescue*

@@ -288,7 +288,7 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 		goto fail;
 
 	PutBoot (ft, (unsigned char *) sector);
-	if (WriteSector (dev, sector, write_buf, &write_buf_cnt, &nSecNo,
+	if (WriteSector (dev, sector, write_buf, &write_buf_cnt, (long long*)&nSecNo,
 		cryptoInfo) == FALSE)
 		goto fail;
 
@@ -297,7 +297,7 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 	{
 		/* fsinfo */
 		PutFSInfo((unsigned char *) sector, ft);
-		if (WriteSector (dev, sector, write_buf, &write_buf_cnt, &nSecNo,
+		if (WriteSector (dev, sector, write_buf, &write_buf_cnt, (long long*)&nSecNo,
 			cryptoInfo) == FALSE)
 			goto fail;
 
@@ -307,7 +307,7 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 			memset (sector, 0, ft->sector_size);
 			sector[508+3]=0xaa; /* TrailSig */
 			sector[508+2]=0x55;
-			if (WriteSector (dev, sector, write_buf, &write_buf_cnt, &nSecNo,
+			if (WriteSector (dev, sector, write_buf, &write_buf_cnt, (long long*)&nSecNo,
 				cryptoInfo) == FALSE)
 				goto fail;
 		}
@@ -315,12 +315,12 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 		/* bootsector backup */
 		memset (sector, 0, ft->sector_size);
 		PutBoot (ft, (unsigned char *) sector);
-		if (WriteSector (dev, sector, write_buf, &write_buf_cnt, &nSecNo,
+		if (WriteSector (dev, sector, write_buf, &write_buf_cnt, (long long*)&nSecNo,
 				 cryptoInfo) == FALSE)
 			goto fail;
 
 		PutFSInfo((unsigned char *) sector, ft);
-		if (WriteSector (dev, sector, write_buf, &write_buf_cnt, &nSecNo,
+		if (WriteSector (dev, sector, write_buf, &write_buf_cnt, (long long*)&nSecNo,
 			cryptoInfo) == FALSE)
 			goto fail;
 	}
@@ -329,7 +329,7 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 	while (nSecNo - startSector < (unsigned int)ft->reserved)
 	{
 		memset (sector, 0, ft->sector_size);
-		if (WriteSector (dev, sector, write_buf, &write_buf_cnt, &nSecNo,
+		if (WriteSector (dev, sector, write_buf, &write_buf_cnt, (long long*)&nSecNo,
 			cryptoInfo) == FALSE)
 			goto fail;
 	}
@@ -373,7 +373,7 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 				}
 			}
 
-			if (WriteSector (dev, sector, write_buf, &write_buf_cnt, &nSecNo,
+			if (WriteSector (dev, sector, write_buf, &write_buf_cnt, (long long*)&nSecNo,
 				    cryptoInfo) == FALSE)
 				goto fail;
 		}
@@ -384,7 +384,7 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 	for (x = 0; x < ft->size_root_dir / ft->sector_size; x++)
 	{
 		memset (sector, 0, ft->sector_size);
-		if (WriteSector (dev, sector, write_buf, &write_buf_cnt, &nSecNo,
+		if (WriteSector (dev, sector, write_buf, &write_buf_cnt, (long long*)&nSecNo,
 				 cryptoInfo) == FALSE)
 			goto fail;
 
@@ -394,7 +394,7 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 
 	if(!quickFormat)
 	{
-		if (!FlushFormatWriteBuffer (dev, write_buf, &write_buf_cnt, &nSecNo, cryptoInfo))
+		if (!FlushFormatWriteBuffer (dev, write_buf, &write_buf_cnt, (long long*)&nSecNo, cryptoInfo))
 			goto fail;
 
 		/* Generate a random temporary key set to be used for "dummy" encryption that will fill
@@ -403,14 +403,14 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 		within the volume). */
 
 		// Temporary master key
-		if (!RandgetBytes (hwndDlg, temporaryKey, EAGetKeySize (cryptoInfo->ea), FALSE))
+		if (!RandgetBytes (hwndDlg, (unsigned char*)temporaryKey, EAGetKeySize (cryptoInfo->ea), FALSE))
 			goto fail;
 
 		// Temporary secondary key (XTS mode)
 		if (!RandgetBytes (hwndDlg, cryptoInfo->k2, sizeof cryptoInfo->k2, FALSE))
 			goto fail;
 
-		retVal = EAInit (cryptoInfo->ea, temporaryKey, cryptoInfo->ks);
+		retVal = EAInit (cryptoInfo->ea, (unsigned char*)temporaryKey, cryptoInfo->ks);
 		if (retVal != ERR_SUCCESS)
 		{
 			burn (temporaryKey, sizeof(temporaryKey));
@@ -425,7 +425,7 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 		x = ft->num_sectors - ft->reserved - ft->size_root_dir / ft->sector_size - ft->fat_length * 2;
 		while (x--)
 		{
-			if (WriteSector (dev, sector, write_buf, &write_buf_cnt, &nSecNo,
+			if (WriteSector (dev, sector, write_buf, &write_buf_cnt, (long long*)&nSecNo,
 				cryptoInfo) == FALSE)
 				goto fail;
 		}
@@ -434,7 +434,7 @@ FormatFat (void* hwndDlgPtr, unsigned __int64 startSector, fatparams * ft, void 
 	else
 		UpdateProgressBar ((uint64) ft->num_sectors * ft->sector_size);
 
-	if (!FlushFormatWriteBuffer (dev, write_buf, &write_buf_cnt, &nSecNo, cryptoInfo))
+	if (!FlushFormatWriteBuffer (dev, write_buf, &write_buf_cnt, (long long*)&nSecNo, cryptoInfo))
 		goto fail;
 
 	TCfree (write_buf);

@@ -17,12 +17,17 @@
 #include "Dlgcode.h"
 #include "Language.h"
 #include <strsafe.h>
+#include <string>
 
 namespace VeraCrypt
 {
 	struct Exception
 	{
 		virtual void Show (HWND parent) const = 0;
+		virtual void Show () const 
+		{
+			return;
+		}
 	};
 
 	struct SystemException : public Exception
@@ -33,6 +38,12 @@ namespace VeraCrypt
 		{
 			SetLastError (ErrorCode);
 			handleWin32Error (parent, SrcPos);
+		}
+
+		void Show () const 
+		{
+			SetLastError (ErrorCode);
+			return;
 		}
 
 		DWORD ErrorCode;

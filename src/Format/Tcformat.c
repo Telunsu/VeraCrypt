@@ -10379,6 +10379,7 @@ static void AfterWMInitTasks (HWND hwndDlg)
 	}
 }
 
+#ifndef DCUBE_API
 int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, wchar_t *lpszCommandLine, int nCmdShow)
 {
 	int status;
@@ -10466,6 +10467,7 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, wchar_t *lpsz
 	FinalizeApp ();
 	return 0;
 }
+#endif
 
 
 static DWORD GetFormatSectorSize ()

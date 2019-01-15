@@ -638,27 +638,27 @@ void CipherInit2(int cipher, void* key, void* ks, int key_len)
 	{
 
 	case AES:
-		CipherInit(cipher,key,ks);
+		CipherInit(cipher, (unsigned char*)key, (unsigned char*)ks);
 		break;
 
 	case SERPENT:
-		CipherInit(cipher,key,ks);
+		CipherInit(cipher, (unsigned char*)key, (unsigned char*)ks);
 		break;
 
 	case TWOFISH:
-		CipherInit(cipher,key,ks);
+		CipherInit(cipher, (unsigned char*)key, (unsigned char*)ks);
 		break;
 		
 	case CAMELLIA:
-		CipherInit(cipher,key,ks);
+		CipherInit(cipher, (unsigned char*)key, (unsigned char*)ks);
 		break;
 #if defined(CIPHER_GOST89)
 	case GOST89:
-		CipherInit(cipher,key,ks);
+		CipherInit(cipher, (unsigned char*)key, (unsigned char*)ks);
 		break;
 #endif // defined(CIPHER_GOST89)
 	case KUZNYECHIK:
-		CipherInit(cipher, key, ks);
+		CipherInit(cipher, (unsigned char*)key, (unsigned char*)ks);
 		break;
 	default:
 		/* Unknown/wrong ID */
@@ -1343,7 +1343,7 @@ static BOOL DoAutoTestAlgorithms (void)
 		int cipher = AES;
 		memcpy(key, aes_ecb_vectors[i].key, 32);
 		memcpy(tmp, aes_ecb_vectors[i].plaintext, 16);
-		CipherInit(cipher, key, ks_tmp);
+		CipherInit(cipher, (unsigned char*)key, ks_tmp);
 
 		EncipherBlock(cipher, tmp, ks_tmp);
 		if (memcmp(aes_ecb_vectors[i].ciphertext, tmp, 16) != 0)
@@ -1388,7 +1388,7 @@ static BOOL DoAutoTestAlgorithms (void)
 		int cipher = SERPENT;
 		memcpy(key, serpent_vectors[i].key, 32);
 		memcpy(tmp, serpent_vectors[i].plaintext, 16);
-		CipherInit(cipher, key, ks_tmp);
+		CipherInit(cipher, (unsigned char*)key, ks_tmp);
 
 		EncipherBlock(cipher, tmp, ks_tmp);
 		if (memcmp(serpent_vectors[i].ciphertext, tmp, 16) != 0)
@@ -1409,7 +1409,7 @@ static BOOL DoAutoTestAlgorithms (void)
 		int cipher = TWOFISH;
 		memcpy(key, twofish_vectors[i].key, 32);
 		memcpy(tmp, twofish_vectors[i].plaintext, 16);
-		CipherInit(cipher, key, ks_tmp);
+		CipherInit(cipher, (unsigned char*)key, ks_tmp);
 
 		EncipherBlock(cipher, tmp, ks_tmp);
 		if (memcmp(twofish_vectors[i].ciphertext, tmp, 16) != 0)
@@ -1429,7 +1429,7 @@ static BOOL DoAutoTestAlgorithms (void)
 		int cipher = CAMELLIA;
 		memcpy(key, camellia_vectors[i].key, 32);
 		memcpy(tmp, camellia_vectors[i].plaintext, 16);
-		CipherInit(cipher, key, ks_tmp);
+		CipherInit(cipher, (unsigned char*)key, ks_tmp);
 
 		EncipherBlock(cipher, tmp, ks_tmp);
 		if (memcmp(camellia_vectors[i].ciphertext, tmp, 16) != 0)
@@ -1449,7 +1449,7 @@ static BOOL DoAutoTestAlgorithms (void)
         int cipher = KUZNYECHIK;
         memcpy(key, kuznyechik_vectors[i].key, 32);
 		memcpy(tmp, kuznyechik_vectors[i].plaintext, 16);
-		CipherInit(cipher, key, ks_tmp);
+		CipherInit(cipher, (unsigned char*)key, ks_tmp);
 
 		EncipherBlock(cipher, tmp, ks_tmp);
 		if (memcmp(kuznyechik_vectors[i].ciphertext, tmp, 16) != 0)
@@ -1470,7 +1470,7 @@ static BOOL DoAutoTestAlgorithms (void)
         int cipher = GOST89;
         memcpy(key, gost89_vectors[i].key, 32);
 		memcpy(tmp, gost89_vectors[i].plaintext, 16);
-		gost_set_key(key, (gost_kds*)ks_tmp, 0);
+		gost_set_key((byte*)key, (gost_kds*)ks_tmp, 0);
 
 		EncipherBlock(cipher, tmp, ks_tmp);
 		if (memcmp(gost89_vectors[i].ciphertext, tmp, 16) != 0)
@@ -1619,7 +1619,7 @@ BOOL test_hmac_whirlpool ()
 	unsigned char digest[1024]; /* large enough to hold digets and test vector inputs */
 
 	memcpy (digest, hmac_whirlpool_test_data, strlen (hmac_whirlpool_test_data));
-	hmac_whirlpool (hmac_whirlpool_test_key, 64, digest, (int) strlen (hmac_whirlpool_test_data));
+	hmac_whirlpool (hmac_whirlpool_test_key, 64, (char*)digest, (int) strlen (hmac_whirlpool_test_data));
 	if (memcmp (digest, hmac_whirlpool_test_vectors, WHIRLPOOL_DIGESTSIZE) != 0)
 		return FALSE;
 

@@ -633,7 +633,7 @@ BOOL CALLBACK KeyFilesDlgProc (HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 				if (UsePreferences)
 				{
 					WaitCursor ();
-					SaveSettings (hwndDlg);
+					SaveMountSettings (hwndDlg);
 					NormalCursor ();
 				}
 			}

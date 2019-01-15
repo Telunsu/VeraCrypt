@@ -448,7 +448,7 @@ begin_format:
 	if (!bInstantRetryOtherFilesys)
 	{
 		// Write the volume header
-		if (!WriteEffectiveVolumeHeader (volParams->bDevice, dev, header))
+		if (!WriteEffectiveVolumeHeader (volParams->bDevice, dev, (byte*)header))
 		{
 			nStatus = ERR_OS_ERROR;
 	        SLOG_TRACE("[TCFormatVolume] error, nStatus = %d", nStatus);
@@ -588,7 +588,7 @@ begin_format:
 		volParams->password,
 		volParams->pkcs5,
 		volParams->pim,
-		cryptoInfo->master_keydata,
+		(char*)cryptoInfo->master_keydata,
 		&cryptoInfo,
 		dataAreaSize,
 		volParams->hiddenVol ? dataAreaSize : 0,
@@ -600,7 +600,7 @@ begin_format:
 		FALSE);
 
 	SLOG_TRACE("Start WriteEffectiveVolumeHeader.");
-	if (!WriteEffectiveVolumeHeader (volParams->bDevice, dev, header))
+	if (!WriteEffectiveVolumeHeader (volParams->bDevice, dev, (byte*)header))
 	{
 		nStatus = ERR_OS_ERROR;
 	    SLOG_TRACE("[TCFormatVolume] FormatNoFs over, nStatus = %d", nStatus);
@@ -664,7 +664,7 @@ begin_format:
 				goto error;
 			}
 
-			if (!WriteEffectiveVolumeHeader (volParams->bDevice, dev, header))
+			if (!WriteEffectiveVolumeHeader (volParams->bDevice, dev, (byte*)header))
 			{
 				nStatus = ERR_OS_ERROR;
 				SLOG_TRACE("[TCFormatVolume] FormatNoFs over, nStatus = %d", nStatus);
@@ -865,14 +865,14 @@ int FormatNoFs (HWND hwndDlg, unsigned __int64 startSector, __int64 num_sectors,
 		deniability of hidden volumes. */
 
 		// Temporary master key
-		if (!RandgetBytes (hwndDlg, temporaryKey, EAGetKeySize (cryptoInfo->ea), FALSE))
+		if (!RandgetBytes (hwndDlg, (unsigned char*)temporaryKey, EAGetKeySize (cryptoInfo->ea), FALSE))
 			goto fail;
 
 		// Temporary secondary key (XTS mode)
 		if (!RandgetBytes (hwndDlg, cryptoInfo->k2, sizeof cryptoInfo->k2, FALSE))
 			goto fail;
 
-		retVal = EAInit (cryptoInfo->ea, temporaryKey, cryptoInfo->ks);
+		retVal = EAInit (cryptoInfo->ea, (unsigned char*)temporaryKey, cryptoInfo->ks);
 		if (retVal != ERR_SUCCESS)
 			goto fail;
 
@@ -884,12 +884,12 @@ int FormatNoFs (HWND hwndDlg, unsigned __int64 startSector, __int64 num_sectors,
 
 		while (num_sectors--)
 		{
-			if (WriteSector (dev, sector, write_buf, &write_buf_cnt, &nSecNo,
+			if (WriteSector (dev, sector, write_buf, &write_buf_cnt, (long long*)&nSecNo,
 				cryptoInfo) == FALSE)
 				goto fail;
 		}
 
-		if (!FlushFormatWriteBuffer (dev, write_buf, &write_buf_cnt, &nSecNo, cryptoInfo))
+		if (!FlushFormatWriteBuffer (dev, write_buf, &write_buf_cnt, (long long*)&nSecNo, cryptoInfo))
 			goto fail;
 	}
 	else
@@ -1149,7 +1149,7 @@ static BOOL StartFormatWriteThread ()
 	if (!WriteBufferFullEvent)
 		goto err;
 
-	WriteThreadBuffer = TCalloc (FormatWriteBufferSize);
+	WriteThreadBuffer = (byte *)TCalloc (FormatWriteBufferSize);
 	if (!WriteThreadBuffer)
 	{
 		SetLastError (ERROR_OUTOFMEMORY);
@@ -1209,7 +1209,7 @@ BOOL FlushFormatWriteBuffer (void *dev, char *write_buf, int *write_buf_cnt, __i
 
 	unitNo.Value = (*nSecNo * FormatSectorSize - *write_buf_cnt) / ENCRYPTION_DATA_UNIT_SIZE;
 
-	EncryptDataUnits (write_buf, &unitNo, *write_buf_cnt / ENCRYPTION_DATA_UNIT_SIZE, cryptoInfo);
+	EncryptDataUnits ((unsigned char*)write_buf, &unitNo, *write_buf_cnt / ENCRYPTION_DATA_UNIT_SIZE, cryptoInfo);
 
 	if (WriteThreadRunning)
 	{
