@@ -2161,13 +2161,11 @@ int DataCubeCreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, 
 
 	/* Encryption setup */
 
-	SLOG_TRACE("=============== CreateVolumeHeaderInMemory 1 ================");
 	if (masterKeydata == NULL)
 	{
 		// We have no master key data (creating a new volume) so we'll use the TrueCrypt RNG to generate them
 
 		int bytesNeeded;
-		SLOG_TRACE("=============== masterKeydata is NULL ================");
 
 
 		switch (mode)
@@ -2177,7 +2175,6 @@ int DataCubeCreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, 
 			bytesNeeded = EAGetKeySize (ea) * 2;	// Size of primary + secondary key(s)
 		}
 
-		SLOG_TRACE("=============== Start RandgetBytes ================");
 
 #if !defined(_UEFI)
 		if (!RandgetBytes (hwndDlg, (unsigned char*)keyInfo.master_keydata, bytesNeeded, TRUE))
@@ -2185,8 +2182,6 @@ int DataCubeCreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, 
 		if (!RandgetBytes(keyInfo.master_keydata, bytesNeeded, TRUE))
 #endif
 		{
-			SLOG_TRACE("=============== RandgetBytes Error ================");
-
 			crypto_close (cryptoInfo);
 			retVal = ERR_CIPHER_INIT_WEAK_KEY;
 			goto err;
@@ -2194,13 +2189,10 @@ int DataCubeCreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, 
 	}
 	else
 	{
-		SLOG_TRACE("=============== masterKeydata is not NULL ================");
-
 		// We already have existing master key data (the header is being re-encrypted)
 		memcpy (keyInfo.master_keydata, masterKeydata, MASTER_KEYDATA_SIZE);
 	}
 
-	SLOG_TRACE("=============== CreateVolumeHeaderInMemory 2 ================");
 	// User key
 	if (password)
 	{
@@ -2291,8 +2283,6 @@ int DataCubeCreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, 
 	}
 
 	/* Header setup */
-
-	SLOG_TRACE("=============== CreateVolumeHeaderInMemory 3 ================");
 	// Salt
 	mputBytes (p, keyInfo.salt, PKCS5_SALT_SIZE);
 
@@ -2359,7 +2349,6 @@ int DataCubeCreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, 
 
 	/* Header encryption */
 
-	SLOG_TRACE("=============== CreateVolumeHeaderInMemory  4================");
 	switch (mode)
 	{
 
@@ -2420,7 +2409,6 @@ int DataCubeCreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, 
 	}
 
 
-	SLOG_TRACE("=============== CreateVolumeHeaderInMemory  5 ================");
 #ifdef VOLFORMAT
 	// yww-: showKeys = false & bBoot = False
 	// if (!bInPlaceEncNonSys && (showKeys || (bBoot && !masterKeydata)))

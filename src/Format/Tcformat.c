@@ -10812,6 +10812,7 @@ BOOL DataCubeCreate(int inputDriveNo, wchar_t* inputFileName, // wchar_t* label,
 	{
 		DWORD dwLastError = GetLastError ();
 		wchar_t szTmp[4096];
+		SLOG_ERROR("Randinit return FALSE.");
 		if (CryptoAPILastError == ERROR_SUCCESS)
 			StringCbPrintfW (szTmp, sizeof(szTmp), GetString ("INIT_RAND"), SRC_POS, dwLastError);
 		else
@@ -10837,10 +10838,12 @@ BOOL DataCubeCreate(int inputDriveNo, wchar_t* inputFileName, // wchar_t* label,
 	// 	AbortProcess ("NODRIVER");
 	// }
 
-
 	// TODO(yww-) : 不知道干嘛用的，后续移到初始化过程中
-	if (!AutoTestAlgorithms())
-	   AbortProcess ("ERR_SELF_TESTS_FAILED");
+	if (!AutoTestAlgorithms()) {
+		SLOG_ERROR("AutoTestAlgorithms return FALSE.");
+		return FALSE;
+	   // AbortProcess ("ERR_SELF_TESTS_FAILED");
+	}
 
 	return  CreateInternal(inputDriveNo, inputFileName, &inputPassword, 
 					inputPim, fileSize, dc_BootEncObj, &dc_BootEncStatus);
@@ -10891,7 +10894,8 @@ static BOOL DataCubeVolTransformThreadFunction (int inputDriveNo,
 	int x = _waccess (inputFileName, 06);
 	if (x == 0 || errno != ENOENT)
 	{
-		SLOG_INFO("waccess return x = %d", x);
+		SLOG_ERROR("waccess return x = %d, errno = %d", x, errno);
+		return FALSE;
 	}
 
 	if (_waccess (inputFileName, 06) != 0)
