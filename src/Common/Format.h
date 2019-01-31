@@ -83,6 +83,22 @@ BOOL FlushFormatWriteBuffer (void *dev, char *write_buf, int *write_buf_cnt, __i
 static BOOL StartFormatWriteThread ();
 static void StopFormatWriteThread ();
 
+// Creates a volume header in memory
+#if defined(_UEFI)
+int DataCubeCreateVolumeHeaderInMemory(BOOL bBoot, char *header, int ea, int mode, Password *password,
+	int pkcs5_prf, int pim, char *masterKeydata, PCRYPTO_INFO *retInfo,
+	unsigned __int64 volumeSize, unsigned __int64 hiddenVolumeSize,
+	unsigned __int64 encryptedAreaStart, unsigned __int64 encryptedAreaLength, uint16 requiredProgramVersion, uint32 headerFlags, uint32 sectorSize, BOOL bWipeMode);
+#else
+int DataCubeCreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, int ea, int mode, Password *password,
+		   int pkcs5_prf, int pim, char *masterKeydata, PCRYPTO_INFO *retInfo,
+		   unsigned __int64 volumeSize, unsigned __int64 hiddenVolumeSize,
+		   unsigned __int64 encryptedAreaStart, unsigned __int64 encryptedAreaLength, uint16 requiredProgramVersion, uint32 headerFlags, uint32 sectorSize, BOOL bWipeMode);
+#endif // !defined(_UEFI)
+
+int DataCubeFormatNoFs (unsigned __int64 startSector, __int64 num_sectors, void *dev, PCRYPTO_INFO cryptoInfo, BOOL quickFormat);
+int DataCubeTCFormatVolume (volatile FORMAT_VOL_PARAMETERS *volParams);
+
 #define FILESYS_NONE	0
 #define FILESYS_FAT		1
 #define FILESYS_NTFS	2

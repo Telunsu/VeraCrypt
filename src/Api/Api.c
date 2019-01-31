@@ -9,16 +9,16 @@
 #include "Mount.h"
 #include "Dlgcode.h"
 #include "Log.h"
+#include "Tcformat.h"
 
 BOOL bTcApiInitialized = FALSE;
 
 #define TCAPI_CHECK_INITIALIZED(RESULT) do { if (!bTcApiInitialized) { SetLastError(TCAPI_E_NOT_INITIALIZED); return RESULT; } } while (0)
 
 DLLEXPORT BOOL APIENTRY Initialize(PTCAPI_OPTIONS options) {
-	init_logger("C:\\Windows\\Temp\\", S_QUIET);
-
 	InitOSVersionInfo();
 
+	init_logger("C:\\Windows\\Temp", S_QUIET);
 	if (IsTrueCryptInstallerRunning()) {
 		SLOG_TRACE("IsTrueCryptInstallerRunning return true");
 		set_error_debug_out(TCAPI_E_TC_INSTALLER_RUNNING);
@@ -52,21 +52,32 @@ DLLEXPORT BOOL APIENTRY Shutdown(void) {
 	return TRUE;
 }
 
-DLLEXPORT BOOL APIENTRY LoadTrueCryptDriver(void)
+DLLEXPORT BOOL APIENTRY LoadVCryptDriver(void)
 {
 	TCAPI_CHECK_INITIALIZED(0);
 	return DriverAttach ();
 }
 
-DLLEXPORT BOOL APIENTRY UnloadTrueCryptDriver(void)
+DLLEXPORT BOOL APIENTRY UnloadVCryptDriver(void)
 {
 	TCAPI_CHECK_INITIALIZED(0);
 	return DriverUnload ();
 }
 
-DLLEXPORT BOOL APIENTRY MountV(int nDosDriveNo, wchar_t *szFileName, Password VolumePassword, int pim, int pkcs5, int trueCryptMode)
+DLLEXPORT BOOL APIENTRY MountV(int nDosDriveNo, wchar_t *szFileName, wchar_t *label, Password VolumePassword, int pim, int pkcs5, int trueCryptMode)
 {
 	TCAPI_CHECK_INITIALIZED(0);
 
-	return DataCubeMount(24, szFileName, L"XYZ", VolumePassword, -1);
+	SLOG_TRACE("MountV, nDosDriveNo = %d, szFileName = %ls, label = %ls, volumePassword.len = %d, volumePassword.Text = %s", 
+		nDosDriveNo, szFileName, label, VolumePassword.Length, VolumePassword.Text);
+	return DataCubeMount(nDosDriveNo, szFileName, label, VolumePassword, -1);
+}
+
+DLLEXPORT BOOL APIENTRY CreateV(int nDosDriveNo, wchar_t *szFileName, Password VolumePassword, unsigned long long fileSize, int pim, int pkcs5, int trueCryptMode)
+{
+	TCAPI_CHECK_INITIALIZED(0);
+
+	SLOG_TRACE("CreateV, szFileName = %ls, volumePassword.len = %d, volumePassword.Text = %s", 
+		szFileName, VolumePassword.Length, VolumePassword.Text);
+	return DataCubeCreate(nDosDriveNo, szFileName, VolumePassword, -1, fileSize);
 }

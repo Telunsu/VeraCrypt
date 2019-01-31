@@ -2492,6 +2492,7 @@ BOOL NonSysInplaceEncInProgressElsewhere (void)
 // Returns TRUE if the mutex is (or had been) successfully acquired (otherwise FALSE). 
 BOOL CreateDriverSetupMutex (void)
 {
+	SLOG_TRACE("=========CreateDriverSetupMutex=============");
 	return TCCreateMutex (&hDriverSetupMutex, TC_MUTEX_NAME_DRIVER_SETUP);
 }
 
@@ -8270,8 +8271,44 @@ retry:
 	else
 	{
 		SLOG_TRACE("[MountVolume] Start PerformMountIoctl");
+		SLOG_TRACE("mount.FilesystemDirty = %d", mount.FilesystemDirty);
+		SLOG_TRACE("mount.VolumeMountedReadOnlyAfterAccessDenied = %d", mount.VolumeMountedReadOnlyAfterAccessDenied);
+		SLOG_TRACE("mount.VolumeMountedReadOnlyAfterDeviceWriteProtected = %d", mount.VolumeMountedReadOnlyAfterDeviceWriteProtected);
+		SLOG_TRACE("mount.wszVolume = %ls", mount.wszVolume);
+		SLOG_TRACE("mount.bCache = %d", mount.bCache);
+		SLOG_TRACE("mount.nDosDriveNo = %d", mount.nDosDriveNo);
+		SLOG_TRACE("mount.BytesPerSector = %d", mount.BytesPerSector);
+		SLOG_TRACE("mount.bMountReadOnly = %d", mount.bMountReadOnly);
+		SLOG_TRACE("mount.bMountRemovable = %d", mount.bMountRemovable);
+		SLOG_TRACE("mount.bExclusiveAccess = %d", mount.bExclusiveAccess);
+		SLOG_TRACE("mount.bMountManager = %d", mount.bMountManager);
+		SLOG_TRACE("mount.bPreserveTimestamp = %d", mount.bPreserveTimestamp);
+		SLOG_TRACE("mount.bPartitionInInactiveSysEncScope = %d", mount.bPartitionInInactiveSysEncScope);
+		SLOG_TRACE("mount.nPartitionInInactiveSysEncScopeDriveNo = %d", mount.nPartitionInInactiveSysEncScopeDriveNo);
+		SLOG_TRACE("mount.SystemFavorite = %d", mount.SystemFavorite);
+		SLOG_TRACE("mount.bProtectHiddenVolume = %d", mount.bProtectHiddenVolume);
+		SLOG_TRACE("mount.UseBackupHeader = %d", mount.UseBackupHeader);
+		SLOG_TRACE("mount.RecoveryMode = %d", mount.RecoveryMode);
+		SLOG_TRACE("mount.pkcs5_prf = %d", mount.pkcs5_prf);
+		SLOG_TRACE("mount.ProtectedHidVolPkcs5Prf = %d", mount.ProtectedHidVolPkcs5Prf);
+		SLOG_TRACE("mount.bTrueCryptMode = %d", mount.bTrueCryptMode);
+		SLOG_TRACE("mount.BytesPerPhysicalSector = %d", mount.BytesPerPhysicalSector);
+		SLOG_TRACE("mount.VolumePim = %d", mount.VolumePim);
+		SLOG_TRACE("mount.ProtectedHidVolPim = %d", mount.ProtectedHidVolPim);
+		SLOG_TRACE("mount.wszLabel = %ls", mount.wszLabel);
+		SLOG_TRACE("mount.bIsNTFS = %d", mount.bIsNTFS);
+		SLOG_TRACE("mount.bDriverSetLabel = %d", mount.bDriverSetLabel);
+		SLOG_TRACE("mount.bCachePim = %d", mount.bCachePim);
+		SLOG_TRACE("mount.MaximumTransferLength = %d", mount.MaximumTransferLength);
+		SLOG_TRACE("mount.MaximumPhysicalPages = %d", mount.MaximumPhysicalPages);
+		SLOG_TRACE("mount.AlignmentMask = %d", mount.AlignmentMask);
+		SLOG_TRACE("dwResult = %d", dwResult);
+		SLOG_TRACE("useVolumeID = %d", useVolumeID);
+		SLOG_TRACE("volumeID = %d", volumeID);
+
 		bResult = PerformMountIoctl (&mount, &dwResult, useVolumeID, volumeID);
 
+		SLOG_TRACE("[MountVolume]  PerformMountIoctl Result = %d", bResult);
 		dwLastError = GetLastError ();
 	}
 
@@ -8524,14 +8561,15 @@ retry:
 	param.retryDelay = retryDelay;
 	param.presult = &result;
 
-	if (Silent)
-	{
+	// yww-: Silent is True
+//	if (Silent)
+//	{
 		UnmountWaitThreadProc (&param, hwndDlg);
-	}
-	else
-	{
-		ShowWaitDialog (hwndDlg, FALSE, UnmountWaitThreadProc, &param);
-	}
+//	}
+//	else
+//	{
+//		ShowWaitDialog (hwndDlg, FALSE, UnmountWaitThreadProc, &param);
+//	}
 
 	SetLastError (param.dwLastError);
 

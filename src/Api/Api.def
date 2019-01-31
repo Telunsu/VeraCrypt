@@ -1,7 +1,8 @@
-LIBRARY	"TrueCryptApi"
+LIBRARY	"DataCubeVCApi64"
 EXPORTS
 	Initialize
 	Shutdown
-	LoadTrueCryptDriver
-	UnloadTrueCryptDriver
+	LoadVCryptDriver
+	UnloadVCryptDriver
 	MountV
+	CreateV

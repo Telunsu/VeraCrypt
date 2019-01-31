@@ -15,6 +15,7 @@
 #include "Crc.h"
 #include "Random.h"
 #include <Strsafe.h>
+#include "Log.h"
 
 static unsigned __int8 buffer[RNG_POOL_SIZE];
 static unsigned char *pRandPool = NULL;
@@ -402,16 +403,24 @@ BOOL RandgetBytesFull ( void* hwndDlg, unsigned char *buf , int len, BOOL forceS
 {
 	int i, looplen;
 	BOOL ret = TRUE;
+	SLOG_TRACE("============================RandgetBytesFull Start======================");
 
-	if (!bRandDidInit || HashFunction == 0)
+	if (!bRandDidInit || HashFunction == 0) {
+		SLOG_TRACE("TC_THROW_FATAL_EXCEPTION, bRandDidInit = %s, HashFunction = %d", ((bRandDidInit == FALSE) ? "FALSE" : "TRUE"), HashFunction);
 		TC_THROW_FATAL_EXCEPTION;
+	}
 
+	SLOG_TRACE("EnterCriticalSection0");
 	EnterCriticalSection (&critRandProt);
+
+	SLOG_TRACE("EnterCriticalSection.");
 
 	if (bDidSlowPoll == FALSE || forceSlowPoll)
 	{
+		SLOG_TRACE("bDidSlowPoll is %s, forceSlowPoll is %s", ((bDidSlowPoll == FALSE) ? "FALSE" : "TRUE"), ((forceSlowPoll == FALSE) ? "FALSE" : "TRUE"));
 		if (!SlowPoll ())
 		{
+			SLOG_TRACE("SlowPoll return FALSE.");
 			handleError ((HWND) hwndDlg, ERR_CAPI_INIT_FAILED, SRC_POS);
 			ret = FALSE;
 		}
@@ -419,8 +428,10 @@ BOOL RandgetBytesFull ( void* hwndDlg, unsigned char *buf , int len, BOOL forceS
 			bDidSlowPoll = TRUE;
 	}
 
+	SLOG_TRACE("Start FastPoll.");
 	if (!FastPoll ())
 	{
+		SLOG_TRACE("FastPoll return false");
 		handleError ((HWND) hwndDlg, ERR_CAPI_INIT_FAILED, SRC_POS);
 		ret = FALSE;
 	}
@@ -428,6 +439,8 @@ BOOL RandgetBytesFull ( void* hwndDlg, unsigned char *buf , int len, BOOL forceS
 	/* There's never more than RNG_POOL_SIZE worth of randomess */
 	if ( (!allowAnyLength) && (len > RNG_POOL_SIZE))
 	{
+		SLOG_TRACE("allowAnyLength is false and len greater than RNG_POOL_SIZE, len = %d", len);
+
 		Error ("ERR_NOT_ENOUGH_RANDOM_DATA", (HWND) hwndDlg);
 		len = RNG_POOL_SIZE;
 		LeaveCriticalSection (&critRandProt);
@@ -477,6 +490,7 @@ BOOL RandgetBytesFull ( void* hwndDlg, unsigned char *buf , int len, BOOL forceS
 	}
 
 	LeaveCriticalSection (&critRandProt);
+	SLOG_TRACE("LeaveCriticalSection");
 
 	if (!ret)
 		TC_THROW_FATAL_EXCEPTION;

@@ -156,9 +156,6 @@
     <ClCompile Include="..\Common\Tests.c">
       <Filter>Source Files\Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\Format\Tcformat.c">
-      <Filter>Source Files\Mount</Filter>
-    </ClCompile>
     <ClCompile Include="..\Format\InPlace.c">
       <Filter>Source Files\Format</Filter>
     </ClCompile>
@@ -173,6 +170,9 @@
     </ClCompile>
     <ClCompile Include="..\Setup\SelfExtract.c">
       <Filter>Source Files\Setup</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Format\Tcformat.c">
+      <Filter>Source Files\Format</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

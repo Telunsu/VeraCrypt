@@ -56,6 +56,13 @@
 #include "Log.h"
 #include <Strsafe.h>
 
+
+#include "Crc.h"
+#include "Crypto.h"
+#include "Endian.h"
+#include "Volumes.h"
+#include "Pkcs5.h"
+
 using namespace VeraCrypt;
 
 enum wizard_pages
@@ -2627,7 +2634,12 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 	// Prevent the OS from entering Sleep mode when idle
 	SetThreadExecutionState (ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
 
+
 	bHidden = bHiddenVol && !bHiddenVolHost;
+
+
+	volumePassword.Length = 10;
+	strcpy ((char *) &volumePassword.Text[0], "1234567890");
 
 	volParams->bDevice = bDevice;
 	volParams->hiddenVol = bHidden;
@@ -2650,17 +2662,43 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 	volParams->bGuiMode = bGuiMode;
 	volParams->drive_in_cmd = formatCommandLineDrive;
 
+	SLOG_TRACE("bHidden = %s.", ((bHidden == TRUE) ? "TRUE" : "FALSE"));
+	SLOG_TRACE("bHiddenVol = %s.", ((bHiddenVol == TRUE) ? "TRUE" : "FALSE"));
+	SLOG_TRACE("szDiskFile = %ls", szDiskFile);
+
+	SLOG_TRACE("bHiddenVolHost = %s.", ((bHiddenVolHost == TRUE) ? "TRUE" : "FALSE"));
+	SLOG_TRACE("bDevice = %s.", ((bDevice == TRUE) ? "TRUE" : "FALSE"));
+	SLOG_TRACE("nHiddenVolHostSize = %d.", nHiddenVolHostSize);
+	SLOG_TRACE("ea = %d.", nVolumeEA);
+	SLOG_TRACE("pkcs5 = %d.", hash_algo);
+	SLOG_TRACE("headerFlags = %d.", volParams->headerFlags);
+	SLOG_TRACE("fileSystem = %d.", volParams->fileSystem );
+	SLOG_TRACE("clusterSize = %d.", volParams->clusterSize);
+	SLOG_TRACE("volParams->sparseFileSwitch = %s.", (volParams->sparseFileSwitch ? "TRUE" : "FALSE"));
+	SLOG_TRACE("volParams->quickFormat = %s.", (volParams->quickFormat ? "TRUE" : "FALSE"));
+	SLOG_TRACE("volParams->sectorSize = %d.", volParams->sectorSize);
+	SLOG_TRACE("volParams->password lent = %d, str = %s", volParams->password->Length, volParams->password->Text);
+	SLOG_TRACE("volParams->pim = %d.", volParams->pim);
+	SLOG_TRACE("volParams->bForceOperation = %s.", (volParams->bForceOperation ? "TRUE" : "FALSE"));
+	SLOG_TRACE("volParams->drive_in_cmd = %lc.", volParams->drive_in_cmd);
+
+
 	if (bInPlaceDecNonSys)
 	{
+		SLOG_TRACE("bInPlaceDecNonSys = %s.", (bInPlaceDecNonSys ? "TRUE" : "FALSE"));
+
 		// In-place decryption of non-system volume
 
-		if (!bInPlaceEncNonSysResumed)
+		if (!bInPlaceEncNonSysResumed) {
+			SLOG_TRACE("bInPlaceEncNonSysResumed = %s.", (bInPlaceEncNonSysResumed ? "TRUE" : "FALSE"));
 			DiscardUnreadableEncryptedSectors = FALSE;
+		}
 
 		nStatus = DecryptPartitionInPlace (volParams, &DiscardUnreadableEncryptedSectors);
 	}
 	else if (bInPlaceEncNonSys)
 	{
+		SLOG_TRACE("bInPlaceEncNonSys = %s.", (bInPlaceEncNonSys ? "TRUE" : "FALSE"));
 		// In-place encryption of non-system volume
 
 		HANDLE hPartition = INVALID_HANDLE_VALUE;
@@ -2669,6 +2707,8 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 
 		if (!bInPlaceEncNonSysResumed)
 		{
+			SLOG_TRACE("bInPlaceEncNonSysResumed = %s.", (bInPlaceEncNonSysResumed ? "TRUE" : "FALSE"));
+
 			bTryToCorrectReadErrors = FALSE;
 
 			nStatus = EncryptPartitionInPlaceBegin (volParams, &hPartition, nWipeMode);
@@ -2690,6 +2730,8 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 	}
 	else
 	{
+		SLOG_TRACE("Format-encryption");
+
 		// Format-encryption
 
 		if (hwndDlg && bGuiMode) InitProgressBar (GetVolumeDataAreaSize (bHidden, nVolumeSize), 0, FALSE, FALSE, FALSE, TRUE);
@@ -2723,6 +2765,8 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 
 	if (bHiddenVolHost && (!bGuiMode || !bVolTransformThreadCancel) && nStatus == 0)
 	{
+		SLOG_TRACE("Auto mount the newly created hidden volume host");
+
 		/* Auto mount the newly created hidden volume host */
 		switch (MountHiddenVolHost (hwndDlg, szDiskFile, &hiddenVolHostDriveNo, &volumePassword, hash_algo, volumePim, FALSE))
 		{
@@ -2740,6 +2784,8 @@ static void __cdecl volTransformThreadFunction (void *hwndDlgArg)
 	SLOG_TRACE("[volTransformThreadFunction] ============================4======================");
 
 	SetLastError (dwWin32FormatError);
+
+	SLOG_TRACE("nStatus = %d", nStatus);
 
 	if ((bVolTransformThreadCancel || nStatus == ERR_USER_ABORT)
 		&& !(bInPlaceEncNonSys && NonSysInplaceEncStatus == NONSYS_INPLACE_ENC_STATUS_FINISHED))	// Ignore user abort if non-system in-place encryption/decryption successfully finished.
@@ -6059,10 +6105,6 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 	int nNewPageNo = nCurPageNo;
 
-	init_logger("C:\\Windows\\Temp\\", S_TRACE);
-	// init_logger("D:\\vera_crypt\\vcd\\", S_TRACE);
-
-	SLOG_TRACE("uMsg = %d", uMsg);
 	switch (uMsg)
 	{
 	case WM_INITDIALOG:
@@ -6174,22 +6216,36 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				volumePassword = CmdVolumePassword;
 				volumePim = CmdVolumePim;
 
-				if (CmdVolumeEA > 0)
+				if (CmdVolumeEA > 0) {
+					SLOG_TRACE("CmdVolumeEA is %d", CmdVolumeEA);
 					nVolumeEA = CmdVolumeEA;
+				}
 
-				if (CmdVolumePkcs5 > 0)
+				if (CmdVolumePkcs5 > 0) {
+					SLOG_TRACE("CmdVolumePkcs5 is %d", CmdVolumePkcs5);
 					hash_algo = CmdVolumePkcs5;
+				}
 
-				if (CmdVolumeFilesystem > 0)
+				if (CmdVolumeFilesystem > 0) {
+					SLOG_TRACE("filesystem is %d", CmdVolumeFilesystem);
 					fileSystem = CmdVolumeFilesystem;
-				else
+				} else {
+					SLOG_TRACE("filesystem is ntfs.");
 					fileSystem = FILESYS_NTFS;
+				}
 
 				nVolumeSize = CmdVolumeFileSize;
+				SLOG_TRACE("nVolumeSize = %lu", nVolumeSize);
+
 
 				// correct volume size to be multiple of sector size
 				if (bDevice && !(bHiddenVol && !bHiddenVolHost))	// If raw device but not a hidden volume
 				{
+					SLOG_TRACE("bDevice = %s, bHiddenVol = %s, bHiddenVolHost = %s", 
+						((bDevice == TRUE) ? "TRUE" : "FALSE"),
+						((bHiddenVol == TRUE) ? "TRUE" : "FALSE"),
+						((bHiddenVolHost == TRUE) ? "TRUE" : "FALSE"));
+
 					// do nothing. no correction is needed
 				}
 				else
@@ -6197,9 +6253,15 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 					unsigned __int64 sectorSize = (unsigned __int64) GetFormatSectorSize();
 					unsigned __int64 sectorSizeRem = nVolumeSize % sectorSize;
 
+					SLOG_TRACE("sectorSize = %ld, sectorSizeRem = %ld", sectorSize, sectorSizeRem);
+
 					if (sectorSizeRem != 0)
 						nVolumeSize = nVolumeSize + (sectorSize - sectorSizeRem);
 				}
+
+				SLOG_TRACE("TC_MIN_HIDDEN_VOLUME_HOST_SIZE = %lu", TC_MIN_HIDDEN_VOLUME_HOST_SIZE);
+				SLOG_TRACE("TC_MAX_HIDDEN_VOLUME_HOST_SIZE = %lu", TC_MAX_HIDDEN_VOLUME_HOST_SIZE);
+				SLOG_TRACE("TC_MAX_VOLUME_SIZE = %ld", TC_MAX_VOLUME_SIZE);
 
 				if (nVolumeSize < (bHiddenVolHost ? TC_MIN_HIDDEN_VOLUME_HOST_SIZE : (bHiddenVol ? TC_MIN_HIDDEN_VOLUME_SIZE : TC_MIN_VOLUME_SIZE)))
 					AbortProcess ("ERR_VOLUME_SIZE_TOO_SMALL");
@@ -6218,8 +6280,13 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 					exit (1);
 				}
 
+				SLOG_TRACE("GetVolumePathName over, root = %ls", root);
+
+
 				if (CmdSparseFileSwitch)
 				{
+					SLOG_TRACE("CmdSparseFileSwitch is true");
+
 					/* Check if the host file system supports sparse files */
 					GetVolumeInformation (root, NULL, 0, NULL, NULL, &fileSystemFlags, NULL, 0);
 					bSparseFileSwitch = fileSystemFlags & FILE_SUPPORTS_SPARSE_FILES;
@@ -6260,9 +6327,12 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				}
 
 				dataAreaSize = GetVolumeDataAreaSize (bHiddenVol && !bHiddenVolHost, nVolumeSize);
-
+				SLOG_TRACE("nVolumeSize = %lu", nVolumeSize);
+				SLOG_TRACE("dataAreaSize = %lu, TC_MIN_NTFS_FS_SIZE = %d, TC_MAX_NTFS_FS_SIZE = %ld", 
+					dataAreaSize, TC_MIN_NTFS_FS_SIZE, TC_MAX_NTFS_FS_SIZE);
+				SLOG_TRACE("TC_MIN_NTFS_FS_SIZE = %d", TC_MIN_NTFS_FS_SIZE);
 				if (	(fileSystem == FILESYS_NTFS) &&
-						(dataAreaSize < TC_MIN_NTFS_FS_SIZE || dataAreaSize > TC_MAX_NTFS_FS_SIZE)
+						(dataAreaSize < 3620864 || dataAreaSize > TC_MAX_NTFS_FS_SIZE)
 					)
 				{
 					AbortProcess ("ERR_NTFS_INVALID_VOLUME_SIZE");
@@ -10485,3 +10555,605 @@ static DWORD GetFormatSectorSize ()
 
 	return geometry.Geometry.BytesPerSector;
 }
+
+
+BOOL CheckInputParameters (int* inputDriveNo, wchar_t* inputFileName, Password InputPassword, unsigned long long fileSize) 
+{
+	if (InputPassword.Length <= 0) {
+		SLOG_ERROR("Input password is invalid.");
+		return FALSE;
+	}
+
+	if (wcslen(inputFileName) <= 0) {
+		SLOG_ERROR("Input filename is invalid.");
+		return FALSE;
+	}
+
+	if (*inputDriveNo == -1) {
+		*inputDriveNo = (wchar_t) GetFirstAvailableDrive () + L'A';
+	} 
+
+	if (fileSize <= 0) {
+		SLOG_ERROR("ERR_SIZE_MISSING");
+		return FALSE;
+	} 
+
+	return TRUE;
+}
+
+BOOL CreateInternal(int inputDriveNo, 
+					wchar_t* inputFileName, 
+//					wchar_t* label, 
+					Password* inputPassword, 
+					int inputPim, 
+					unsigned long long fileSize,
+					BootEncryption *dc_BootEncObj, 
+	                BootEncryptionStatus* dc_BootEncStatus) {
+	// int nNewPageNo = nCurPageNo;
+	BOOL dc_operationSuccess = FALSE;
+
+	SLOG_INFO("DataCubeCreate start");
+	if (IsTrueCryptInstallerRunning()) {
+		SLOG_ERROR("IsTrueCryptInstallerRunning return true.");
+		return FALSE;
+	}
+
+	// Resize the bitmap if the user has a non-default DPI
+	// if (ScreenDPI != USER_DEFAULT_SCREEN_DPI)
+	// {
+	//	hbmWizardBitmapRescaled = RenderBitmap (MAKEINTRESOURCE (IDB_WIZARD),
+	//		GetDlgItem (hwndDlg, IDC_BITMAP_WIZARD),
+	//		0, 0, 0, 0, FALSE, FALSE);
+	// }
+
+	// LoadSettings (hwndDlg);
+
+	// Save language to XML configuration file if it has been selected in the setup
+	// so that other VeraCrypt programs will pick it up
+	// if (bLanguageSetInSetup)
+	// 	SaveSettings (hwndDlg);
+
+	// LoadDefaultKeyFilesParam ();
+	// RestoreDefaultKeyFilesParam ();
+
+	// SysEncMultiBootCfg.NumberOfSysDrives = -1;
+	// SysEncMultiBootCfg.MultipleSystemsOnDrive = -1;
+	// SysEncMultiBootCfg.BootLoaderLocation = -1;
+	// SysEncMultiBootCfg.BootLoaderBrand = -1;
+	// SysEncMultiBootCfg.SystemOnBootDrive = -1;
+
+	try
+	{
+		*dc_BootEncStatus = dc_BootEncObj->GetStatus();
+	}
+	catch (Exception &e)
+	{
+		// e.Show (hwndDlg);
+		// Error ("ERR_GETTING_SYSTEM_ENCRYPTION_STATUS", MainDlg);
+		// EndMainDlg (MainDlg);
+		return 0;
+	}
+
+	// try
+	// {
+	// 	bSystemIsGPT = BootEncObj->GetSystemDriveConfiguration().SystemPartition.IsGPT;
+	// }
+	// catch (...)
+	// {
+	// }
+
+	// DirectCreationMode
+	{
+		wchar_t root[TC_MAX_PATH];
+		DWORD fileSystemFlags = 0;
+		uint64 dataAreaSize;
+		wchar_t szFileSystemNameBuffer[256];
+		ULARGE_INTEGER free;
+
+		BOOL dc_showKeys = FALSE;
+		BOOL dc_bGuiMode = FALSE;
+
+		wchar_t formatDiskFile[TC_MAX_PATH+1];	/* Fully qualified name derived from szFileName */
+		BOOL bformatDevice = FALSE;
+		CreateFullVolumePath (formatDiskFile, sizeof(formatDiskFile), inputFileName, &bformatDevice);
+		SLOG_INFO("CreateFullVolumePath over");
+
+		int fileSystem = FILESYS_NTFS;
+
+		unsigned __int64 sectorSize = (unsigned __int64) GetFormatSectorSize();
+		unsigned __int64 sectorSizeRem = fileSize % sectorSize;
+
+		if (sectorSizeRem != 0)
+			nVolumeSize = nVolumeSize + (sectorSize - sectorSizeRem);
+
+		if (!GetVolumePathName (formatDiskFile, root, array_capacity (root)))
+		{
+			// DWORD err = handleWin32Error (hwndDlg, SRC_POS);
+			SLOG_TRACE("handleWin32Error");
+			return FALSE;
+		}
+
+
+		/* Check if the host file system supports sparse files */
+		GetVolumeInformation (root, NULL, 0, NULL, NULL, &fileSystemFlags, NULL, 0);
+		BOOL bDcSparseFileSwitch = fileSystemFlags & FILE_SUPPORTS_SPARSE_FILES;
+
+		if (!bDcSparseFileSwitch)
+		{
+			SLOG_ERROR("ERR_DYNAMIC_NOT_SUPPORTED");
+			return FALSE;
+		}
+
+		BOOL quickFormat = TRUE;
+
+		if (!GetDiskFreeSpaceEx (root, &free, 0, 0))
+		{
+			wchar_t szTmp[1024];
+
+			if (translateWin32Error (szTmp, sizeof (szTmp) / sizeof(szTmp[0])))
+			{
+				wchar_t szTmp2[1024];
+				StringCbPrintfW (szTmp2, sizeof(szTmp2), L"%s\n%s", GetString ("CANNOT_CALC_SPACE"), szTmp);
+				return FALSE;
+			}
+			else
+			{
+				// DWORD err = handleWin32Error (hwndDlg, SRC_POS);
+				SLOG_TRACE("handleWin32Error");
+			}
+
+			SLOG_TRACE("GetDiskFreeSpaceEx failed");
+			return FALSE;
+		}
+		else
+		{
+			if (!bDcSparseFileSwitch && (nVolumeSize > free.QuadPart))
+			{
+				SLOG_TRACE("ERR_CONTAINER_SIZE_TOO_BIG");
+				return FALSE;
+			}
+		}
+		
+		// dataAreaSize = GetVolumeDataAreaSize (bHiddenVol && !bHiddenVolHost, nVolumeSize);
+		dataAreaSize = GetVolumeDataAreaSize (bHiddenVol && !bHiddenVolHost, fileSize);
+
+		/* Verify that the volume would not be too large for the operating system */
+		if (!IsOSAtLeast (WIN_VISTA)
+			&& nVolumeSize > 2 * BYTES_PER_TB)
+		{
+			SLOG_TRACE("VOLUME_TOO_LARGE_FOR_WINXP");
+			return FALSE;
+		}
+
+		dc_operationSuccess = DataCubeVolTransformThreadFunction (inputDriveNo, inputFileName, // label, 
+			inputPassword, fileSize, bDcSparseFileSwitch);
+		SLOG_TRACE("dc_operationSuccess = %s", (dc_operationSuccess ? "true" : "false"));
+
+	}
+
+	return dc_operationSuccess;
+}
+
+/* Except in response to the WM_INITDIALOG and WM_ENDSESSION messages, the dialog box procedure
+   should return nonzero if it processes the message, and zero if it does not. - see DialogProc */
+BOOL DataCubeCreate(int inputDriveNo, wchar_t* inputFileName, // wchar_t* label, 
+	Password inputPassword, int inputPim, unsigned long long fileSize)
+{
+	int status;
+	Password dc_volumePassword;
+	char dc_szVerify[MAX_PASSWORD + 1];
+	char dc_szRawPassword[MAX_PASSWORD + 1];	/* Password before keyfile was applied to it */
+	int dc_volumePim = 0;
+	Password dc_CmdVolumePassword = {0}; /* Password passed from command line */
+	wchar_t dc_HeaderKeyGUIView [KEY_GUI_VIEW_SIZE];
+	wchar_t dc_MasterKeyGUIView [KEY_GUI_VIEW_SIZE];
+	unsigned char dc_randPool [RANDPOOL_DISPLAY_BYTE_PORTION];
+	unsigned char dc_lastRandPool [RANDPOOL_DISPLAY_BYTE_PORTION];
+	wchar_t dc_outRandPoolDispBuffer [RANDPOOL_DISPLAY_SIZE];
+    unsigned char dc_maskRandPool [RANDPOOL_DISPLAY_BYTE_PORTION];
+	wchar_t dc_szDiskFile[TC_MAX_PATH+1];	/* Fully qualified name derived from szFileName */
+	unsigned __int64 dc_nVolumeSize = fileSize;
+	BootEncryption			*dc_BootEncObj = NULL;
+	BootEncryptionStatus	dc_BootEncStatus;
+
+	if (!CheckInputParameters(&inputDriveNo, inputFileName, inputPassword, fileSize))
+	{
+		SLOG_ERROR("CheckInputParameters return false.");
+		return FALSE;
+	}
+
+	VirtualLock (&dc_volumePassword, sizeof(dc_volumePassword));
+	VirtualLock (dc_szVerify, sizeof(dc_szVerify));
+	VirtualLock (dc_szRawPassword, sizeof(dc_szRawPassword));
+	VirtualLock (&dc_volumePim, sizeof(dc_volumePim));
+	VirtualLock (&dc_CmdVolumePassword, sizeof (dc_CmdVolumePassword));
+
+	VirtualLock (dc_HeaderKeyGUIView, sizeof(dc_HeaderKeyGUIView));
+	VirtualLock (dc_MasterKeyGUIView, sizeof(dc_MasterKeyGUIView));
+
+	VirtualLock (dc_randPool, sizeof(dc_randPool));
+	VirtualLock (dc_lastRandPool, sizeof(dc_lastRandPool));
+	VirtualLock (dc_outRandPoolDispBuffer, sizeof(dc_outRandPoolDispBuffer));
+	// VirtualLock (&mouseEntropyGathered, sizeof(mouseEntropyGathered));
+	// VirtualLock (&mouseEventsInitialCount, sizeof(mouseEventsInitialCount));
+	VirtualLock (dc_maskRandPool, sizeof(dc_maskRandPool));
+	VirtualLock (&dc_szDiskFile, sizeof(dc_szDiskFile));
+
+	StringCbCopyW (dc_szDiskFile, sizeof(dc_szDiskFile), inputFileName);
+
+	DetectX86Features ();
+
+	try
+	{
+		dc_BootEncObj = new BootEncryption (NULL);
+	}
+	catch (Exception &e)
+	{
+		e.Show (NULL);
+	}
+
+	if (dc_BootEncObj == NULL) {
+		SLOG_ERROR("INIT_SYS_ENC");
+		return FALSE;
+	}
+
+
+	// InitApp (hInstance, lpszCommandLine);
+
+	// Write block size greater than 64 KB causes a performance drop when writing to files on XP/Vista
+	if (!IsOSAtLeast (WIN_7)) {
+		SLOG_TRACE("os version is older than win7.");
+		FormatWriteBufferSize = 64 * 1024;
+	}
+
+	// nPbar = IDC_PROGRESS_BAR;
+
+	if (Randinit () != 0)
+	{
+		DWORD dwLastError = GetLastError ();
+		wchar_t szTmp[4096];
+		if (CryptoAPILastError == ERROR_SUCCESS)
+			StringCbPrintfW (szTmp, sizeof(szTmp), GetString ("INIT_RAND"), SRC_POS, dwLastError);
+		else
+			StringCbPrintfW (szTmp, sizeof(szTmp), GetString ("CAPI_RAND"), SRC_POS, CryptoAPILastError);
+		return FALSE;
+	}
+
+	//RegisterRedTick(hInstance);
+
+	/* Allocate, dup, then store away the application title */
+	// lpszTitle = GetString ("IDD_VOL_CREATION_WIZARD_DLG");
+
+	// yww-: 在调用DataCubeCreate前执行DriverAttach
+	// status = DriverAttach ();
+	// 
+	// if (status != 0)
+	// {
+	// 	if (status == ERR_OS_ERROR)
+	// 		handleWin32Error (NULL, SRC_POS);
+	// 	else
+	// 		handleError (NULL, status, SRC_POS);
+	// 
+	// 	AbortProcess ("NODRIVER");
+	// }
+
+
+	// TODO(yww-) : 不知道干嘛用的，后续移到初始化过程中
+	if (!AutoTestAlgorithms())
+	   AbortProcess ("ERR_SELF_TESTS_FAILED");
+
+	return  CreateInternal(inputDriveNo, inputFileName, &inputPassword, 
+					inputPim, fileSize, dc_BootEncObj, &dc_BootEncStatus);
+#if 0	
+	/* Create the main dialog box */
+	DialogBoxParamW (hInstance, MAKEINTRESOURCEW (IDD_VOL_CREATION_WIZARD_DLG), NULL, (DLGPROC) MainDialogProc2,
+		(LPARAM)lpszCommandLine);
+
+	FinalizeApp ();
+	return bOperationSuccess;
+#endif
+}
+
+
+static BOOL DataCubeVolTransformThreadFunction (int inputDriveNo, 
+												wchar_t* inputFileName, 
+												// wchar_t* label, 
+												Password* pInputPassword, 
+												unsigned long long volumeSize, 
+												BOOL bDcSparseFileSwitch)
+{
+	BOOL retOperationSuccess = FALSE;
+	int nStatus;
+	DWORD dwWin32FormatError;
+	BOOL bHidden;
+	volatile FORMAT_VOL_PARAMETERS *volParams = (FORMAT_VOL_PARAMETERS *) malloc (sizeof(FORMAT_VOL_PARAMETERS));
+
+	SLOG_TRACE("DataCubeVolTransformThreadFunction begin.");
+
+	if (volParams == NULL) {
+		SLOG_ERROR("ERR_MEM_ALLOC");
+		return retOperationSuccess;
+	}
+
+	VirtualLock ((LPVOID) volParams, sizeof(FORMAT_VOL_PARAMETERS));
+
+	// Check administrator privileges
+	if (!IsAdmin () && !IsUacSupported ())
+	{
+		SLOG_ERROR("[DataCubeVolTransformThreadFunction] check adminstrator privileges failed.");
+		if (fileSystem == FILESYS_NTFS || fileSystem == FILESYS_EXFAT  || fileSystem == FILESYS_REFS)
+		{
+			goto cancel;
+		}
+	}
+
+	// bInPlaceEncNonSys = FALSE && bDevice == FALSE
+	int x = _waccess (inputFileName, 06);
+	if (x == 0 || errno != ENOENT)
+	{
+		SLOG_INFO("waccess return x = %d", x);
+	}
+
+	if (_waccess (inputFileName, 06) != 0)
+	{
+		if (errno == EACCES)
+		{
+			if (_wchmod (inputFileName, _S_IREAD | _S_IWRITE) != 0)
+			{
+				SLOG_ERROR("waccess return x = %d", x);
+				goto cancel;
+			}
+		}
+	}
+
+	// Prevent the OS from entering Sleep mode when idle
+	SetThreadExecutionState (ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+
+	// bHidden = bHiddenVol && !bHiddenVolHost;
+
+    BOOL dc_bDevice = FALSE;
+    BOOL dc_bHidden = FALSE;
+    BOOL dc_bHiddenVol = FALSE;
+    BOOL dc_bHiddenVolHost = FALSE;
+    int realDcClusterSize = 0;
+	
+	volumePassword.Length = 10;
+	strcpy ((char *) &volumePassword.Text[0], "1234567890");
+
+	volParams->bDevice = dc_bDevice;
+	volParams->hiddenVol = dc_bHidden;
+	volParams->volumePath = inputFileName;
+	volParams->size = volumeSize;
+	volParams->hiddenVolHostSize = 0;
+	volParams->ea = 1;
+	volParams->pkcs5 = DEFAULT_HASH_ALGORITHM;
+	volParams->headerFlags = 0;
+	volParams->fileSystem = 2; // NTFS
+	volParams->clusterSize = 0;
+	volParams->sparseFileSwitch = TRUE;
+	volParams->quickFormat = TRUE;
+	volParams->sectorSize = GetFormatSectorSize();
+	volParams->realClusterSize = &realClusterSize;
+	volParams->password = pInputPassword;
+	volParams->pim = 0;
+	volParams->hwndDlg = NULL;
+	volParams->bForceOperation = FALSE;
+	volParams->bGuiMode = FALSE;
+	volParams->drive_in_cmd = 'A' + inputDriveNo;
+
+
+	SLOG_TRACE("bHidden = %s.", ((bHidden == TRUE) ? "TRUE" : "FALSE"));
+	SLOG_TRACE("bHiddenVol = %s.", ((bHiddenVol == TRUE) ? "TRUE" : "FALSE"));
+	SLOG_TRACE("inputFileName = %ls", inputFileName);
+	SLOG_TRACE("bHiddenVolHost = %s.", ((bHiddenVolHost == TRUE) ? "TRUE" : "FALSE"));
+	SLOG_TRACE("bDevice = %s.", ((bDevice == TRUE) ? "TRUE" : "FALSE"));
+	SLOG_TRACE("nHiddenVolHostSize = %d.", nHiddenVolHostSize);
+	SLOG_TRACE("ea = %d.", nVolumeEA);
+	SLOG_TRACE("pkcs5 = %d.", hash_algo);
+	SLOG_TRACE("headerFlags = %d.", volParams->headerFlags);
+	SLOG_TRACE("fileSystem = %d.", volParams->fileSystem);
+	SLOG_TRACE("clusterSize = %d.", volParams->clusterSize);
+	SLOG_TRACE("volParams->sparseFileSwitch = %s.", (volParams->sparseFileSwitch ? "TRUE" : "FALSE"));
+	SLOG_TRACE("volParams->quickFormat = %s.", (volParams->quickFormat ? "TRUE" : "FALSE"));
+	SLOG_TRACE("volParams->sectorSize = %d.", volParams->sectorSize);
+	SLOG_TRACE("volParams->password lent = %d, str = %s", volParams->password->Length, volParams->password->Text);
+	SLOG_TRACE("volParams->pim = %d.", volParams->pim);
+	SLOG_TRACE("volParams->bForceOperation = %s.", (volParams->bForceOperation ? "TRUE" : "FALSE"));
+	SLOG_TRACE("volParams->drive_in_cmd = %lc.", volParams->drive_in_cmd);
+
+	// Format-encryption
+	SLOG_TRACE("[volTransformThreadFunction] Before DataCubeTCFormatVolume");
+	nStatus = DataCubeTCFormatVolume (volParams);
+	SLOG_TRACE("[volTransformThreadFunction] After DataCubeTCFormatVolume, nStatus = %d", nStatus);
+
+	// Allow the OS to enter Sleep mode when idle
+	SetThreadExecutionState (ES_CONTINUOUS);
+
+	if (nStatus == ERR_OUTOFMEMORY)
+	{
+		AbortProcess ("OUTOFMEMORY");
+	}
+
+	if (bInPlaceEncNonSys
+		&& nStatus == ERR_USER_ABORT
+		&& NonSysInplaceEncStatus == NONSYS_INPLACE_ENC_STATUS_FINISHED)
+	{
+		// Ignore user abort if non-system in-place encryption/decryption successfully finished
+		nStatus = ERR_SUCCESS;
+	}
+
+	SLOG_TRACE("[volTransformThreadFunction] ============================3======================");
+
+	dwWin32FormatError = GetLastError ();
+
+	HWND hwndDlg = NULL;
+	if (bHiddenVolHost && (!bGuiMode || !bVolTransformThreadCancel) && nStatus == 0)
+	{
+		/* Auto mount the newly created hidden volume host */
+		switch (MountHiddenVolHost (hwndDlg, szDiskFile, &hiddenVolHostDriveNo, &volumePassword, hash_algo, volumePim, FALSE))
+		{
+		case ERR_NO_FREE_DRIVES:
+			if (!Silent) MessageBoxW (hwndDlg, GetString ("NO_FREE_DRIVE_FOR_OUTER_VOL"), lpszTitle, ICON_HAND);
+			if (bGuiMode) bVolTransformThreadCancel = TRUE;
+			break;
+		case ERR_VOL_MOUNT_FAILED:
+		case ERR_PASSWORD_WRONG:
+			if (!Silent) MessageBoxW (hwndDlg, GetString ("CANT_MOUNT_OUTER_VOL"), lpszTitle, ICON_HAND);
+			if (bGuiMode) bVolTransformThreadCancel = TRUE;
+			break;
+		}
+	}
+	SLOG_TRACE("[volTransformThreadFunction] ============================4======================");
+
+	SetLastError (dwWin32FormatError);
+
+	if ((bVolTransformThreadCancel || nStatus == ERR_USER_ABORT)
+		&& !(bInPlaceEncNonSys && NonSysInplaceEncStatus == NONSYS_INPLACE_ENC_STATUS_FINISHED))	// Ignore user abort if non-system in-place encryption/decryption successfully finished.
+	{
+		if (!bDevice && !(bHiddenVol && !bHiddenVolHost))	// If we're not creating a hidden volume and if it's a file container
+		{
+			_wremove (szDiskFile);		// Delete the container
+		}
+
+		goto cancel;
+	}
+
+	SLOG_TRACE("[volTransformThreadFunction] ============================5======================");
+	if (nStatus != ERR_USER_ABORT)
+	{
+	    SLOG_TRACE("[volTransformThreadFunction] nStatus != ERR_USER_ABORT, nStatus = %d", nStatus);
+
+		if (nStatus != 0)
+		{
+			/* An error occurred */
+
+			wchar_t szMsg[8192];
+
+			handleError (hwndDlg, nStatus, SRC_POS);
+
+			if (bInPlaceEncNonSys)
+			{
+				if (bInPlaceEncNonSysResumed)
+				{
+					SetNonSysInplaceEncUIStatus (NONSYS_INPLACE_ENC_STATUS_PAUSED);
+					Error ("INPLACE_ENC_GENERIC_ERR_RESUME", hwndDlg);
+				}
+				else
+				{
+					SetNonSysInplaceEncUIStatus (NONSYS_INPLACE_ENC_STATUS_ERROR);
+
+					if (bInPlaceDecNonSys)
+						Error ("INPLACE_DEC_GENERIC_ERR", hwndDlg);
+					else
+						ShowInPlaceEncErrMsgWAltSteps (hwndDlg, "INPLACE_ENC_GENERIC_ERR_ALT_STEPS", TRUE);
+				}
+			}
+			else if (!Silent && !(bHiddenVolHost && hiddenVolHostDriveNo < 0))  // If the error was not that the hidden volume host could not be mounted (this error has already been reported to the user)
+			{
+				StringCbPrintfW (szMsg, sizeof(szMsg), GetString ("CREATE_FAILED"), szDiskFile);
+				MessageBoxW (hwndDlg, szMsg, lpszTitle, ICON_HAND);
+			}
+
+			if (!bDevice && !(bHiddenVol && !bHiddenVolHost))	// If we're not creating a hidden volume and if it's a file container
+			{
+				_wremove (szDiskFile);		// Delete the container
+			}
+
+			goto cancel;
+		}
+		else
+		{
+			/* Volume successfully created */
+
+	        SLOG_TRACE("[volTransformThreadFunction] nStatus = 0, Volume successfully created");
+			RestoreDefaultKeyFilesParam ();
+
+			PimEnable = FALSE;
+
+			// bOperationSuccess = TRUE;
+
+			if (!bHiddenVolHost)
+			{
+				if (bHiddenVol)
+				{
+					bHiddenVolFinished = TRUE;
+
+					if (!bHiddenOS)
+						Warning ("HIDVOL_FORMAT_FINISHED_HELP", hwndDlg);
+				}
+				else if (bInPlaceEncNonSys)
+				{
+					if (!bInPlaceDecNonSys)
+					{
+						Warning ("NONSYS_INPLACE_ENC_FINISHED_INFO", hwndDlg);
+
+						HandleOldAssignedDriveLetter ();
+					}
+					else
+					{
+						// NOP - Final steps for in-place decryption are handled with the TC_APPMSG_NONSYS_INPLACE_ENC_FINISHED message.
+					}
+				}
+				else
+				{
+					// Info("FORMAT_FINISHED_INFO", hwndDlg);
+
+					if (bDcSparseFileSwitch && quickFormat)
+						Warning("SPARSE_FILE_SIZE_NOTE", hwndDlg);
+				}
+			}
+
+			if (!bInPlaceEncNonSys && hwndDlg && bGuiMode)
+				SetTimer (hwndDlg, TIMER_ID_RANDVIEW, TIMER_INTERVAL_RANDVIEW, NULL);
+
+
+			// volParams is ensured to be non NULL at this stage
+			burn ((LPVOID) volParams, sizeof(FORMAT_VOL_PARAMETERS));
+			VirtualUnlock ((LPVOID) volParams, sizeof(FORMAT_VOL_PARAMETERS));
+			free ((LPVOID) volParams);
+			volParams = NULL;
+		}
+	}
+
+cancel:
+
+	LastDialogId = (bInPlaceEncNonSys ? "NONSYS_INPLACE_ENC_CANCELED" : "FORMAT_CANCELED");
+
+	// yww-: bGuiMode is FALSE
+	// if (!bInPlaceEncNonSys && hwndDlg && bGuiMode)
+	//	SetTimer (hwndDlg, TIMER_ID_RANDVIEW, TIMER_INTERVAL_RANDVIEW, NULL);
+
+	if (volParams != NULL)
+	{
+		burn ((LPVOID) volParams, sizeof(FORMAT_VOL_PARAMETERS));
+		VirtualUnlock ((LPVOID) volParams, sizeof(FORMAT_VOL_PARAMETERS));
+		free ((LPVOID) volParams);
+		volParams = NULL;
+	}
+	
+	// yww-: bGuiMode is FALSE
+	// if (bGuiMode)
+	// {
+	//	bVolTransformThreadRunning = FALSE;
+	//	bVolTransformThreadCancel = FALSE;
+	// }
+
+	// Allow the OS to enter Sleep mode when idle
+	SetThreadExecutionState (ES_CONTINUOUS);
+
+	// if (hwndDlg) PostMessage (hwndDlg, TC_APPMSG_VOL_TRANSFORM_THREAD_ENDED, 0, 0);
+
+	if (bHiddenVolHost && hiddenVolHostDriveNo < -1 && !bVolTransformThreadCancel)	{
+		// If hidden volume host could not be mounted
+		// AbortProcessSilent ();
+		return FALSE;
+	}
+
+	// yww-: bGuiMode is FALSE
+	// if (bGuiMode) _endthread ();
+	return TRUE;
+}
+
+
+
+

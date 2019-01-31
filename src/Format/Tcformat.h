@@ -104,6 +104,15 @@ extern wchar_t HeaderKeyGUIView [KEY_GUI_VIEW_SIZE];
 extern wchar_t MasterKeyGUIView [KEY_GUI_VIEW_SIZE];
 extern volatile int NonSysInplaceEncStatus;
 
+BOOL CheckInputParameters(int* inputDriveNo, wchar_t* inputFileName, Password InputPassword, unsigned long long fileSize);
+
+BOOL DataCubeCreate(int inputDriveNo, wchar_t* inputFileName, // wchar_t* label, 
+	Password inputPassword, int inputPim, unsigned long long fileSize);
+
+// static BOOL DataCubeVolTransformThreadFunction (unsigned long long volumeSize, BOOL bDcSparseFileSwitch);
+static BOOL DataCubeVolTransformThreadFunction (int inputDriveNo, wchar_t* inputFileName, // wchar_t* label, 
+	Password* pInputPassword, unsigned long long volumeSize, BOOL bDcSparseFileSwitch);
+
 #ifdef __cplusplus
 }
 #endif

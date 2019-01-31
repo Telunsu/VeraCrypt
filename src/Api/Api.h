@@ -24,9 +24,11 @@ extern "C" {
 
 	DLLEXPORT BOOL APIENTRY Initialize(PTCAPI_OPTIONS options);
 	DLLEXPORT BOOL APIENTRY Shutdown(void);
-	DLLEXPORT int APIENTRY LoadTrueCryptDriver(void);
-	DLLEXPORT BOOL APIENTRY UnloadTrueCryptDriver(void);
-	DLLEXPORT BOOL APIENTRY MountV(int nDosDriveNo, wchar_t *szFileName, Password VolumePassword, int pim, int pkcs5, int trueCryptMode);
+	DLLEXPORT int APIENTRY LoadVCryptDriver(void);
+	DLLEXPORT BOOL APIENTRY UnloadVCryptDriver(void);
+	DLLEXPORT BOOL APIENTRY MountV(int nDosDriveNo, wchar_t *szFileName, wchar_t *label, Password VolumePassword, int pim, int pkcs5, int trueCryptMode);
+	//DLLEXPORT BOOL APIENTRY CreateV(int nDosDriveNo, wchar_t *szFileName, Password VolumePassword, int pim, int pkcs5, int trueCryptMode);
+	DLLEXPORT BOOL APIENTRY CreateV(int nDosDriveNo, wchar_t *szFileName, Password VolumePassword, unsigned long long fileSize, int pim, int pkcs5, int trueCryptMode);
 
 #ifdef __cplusplus
 }

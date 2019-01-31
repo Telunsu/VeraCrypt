@@ -6735,8 +6735,6 @@ void DisplayDriveListContextMenu (HWND hwndDlg, LPARAM lParam)
    should return nonzero if it processes a message, and zero if it does not. */
 BOOL CALLBACK MountMainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	init_logger("C:\\Windows\\Temp\\", S_TRACE);
-
 	static UINT taskBarCreatedMsg;
 	WORD lw = LOWORD (wParam);
 	WORD hw = HIWORD (wParam);
@@ -11787,6 +11785,7 @@ BOOL DataCubeMount(int inputDriveNo, wchar_t* inputFileName, wchar_t* label, Pas
 		return FALSE;
 	} 
 
+	SLOG_INFO("IsMountedVolume");
 	if (!IsMountedVolume (mountFileName)) 
 	{
 		BOOL mounted = FALSE;
@@ -11827,7 +11826,6 @@ BOOL DataCubeMount(int inputDriveNo, wchar_t* inputFileName, wchar_t* label, Pas
 									   &dcMountOptions, 
 									   TRUE, 
 									   FALSE);
-
 				SLOG_TRACE("End MountVolume, mounted = %d", mounted);
 			}
 		}
@@ -11845,5 +11843,5 @@ BOOL DataCubeMount(int inputDriveNo, wchar_t* inputFileName, wchar_t* label, Pas
 	}
 
 	ResetCurrentDirectory ();
-	return 0;
+	return TRUE;
 }

@@ -11,7 +11,8 @@ typedef BOOL (STDMETHODCALLTYPE *PINITIALIZE)(PTCAPI_OPTIONS options);
 typedef int (STDMETHODCALLTYPE *PSHUTDOWN)();
 typedef int (STDMETHODCALLTYPE *PLOAD_TC_DRIVER)();
 typedef int (STDMETHODCALLTYPE *PUNLOAD_TC_DRIVER)();
-typedef BOOL (STDMETHODCALLTYPE *PMOUNT)(int nDosDriveNo, wchar_t *szFileName, Password VolumePassword, int pim, int pkcs5, int trueCryptMode);
+typedef BOOL (STDMETHODCALLTYPE *PMOUNT)(int nDosDriveNo, wchar_t *szFileName, wchar_t *label, Password VolumePassword, int pim, int pkcs5, int trueCryptMode);
+typedef BOOL (STDMETHODCALLTYPE *PCREATE)(int nDosDriveNo, wchar_t *szFileName, Password VolumePassword, unsigned long long size, int pim, int pkcs5, int trueCryptMode);
 
 class ApiTest {
 private:
@@ -21,6 +22,7 @@ private:
 	PINITIALIZE Initialize;
 	PSHUTDOWN Shutdown;
 	PMOUNT Mount;
+	PCREATE Create;
 
 protected:
 	BOOL LoadTrueCryptApi(LPCTSTR path) {
@@ -60,9 +62,10 @@ protected:
 
 		LoadProcAddress((FARPROC *)&Initialize, "Initialize");
 		LoadProcAddress((FARPROC *)&Shutdown, "Shutdown");
-		LoadProcAddress((FARPROC *)&LoadTrueCryptDriver, "LoadTrueCryptDriver");
-		LoadProcAddress((FARPROC *)&UnloadTrueCryptDriver, "UnloadTrueCryptDriver");
+		LoadProcAddress((FARPROC *)&LoadTrueCryptDriver, "LoadVCryptDriver");
+		LoadProcAddress((FARPROC *)&UnloadTrueCryptDriver, "UnloadVCryptDriver");
 		LoadProcAddress((FARPROC *)&Mount, "MountV");
+		LoadProcAddress((FARPROC *)&Create, "CreateV");
 
 		return TRUE;
 	}
@@ -126,7 +129,7 @@ protected:
 
 	void RunMount() {
 		Password pass;
-		const char *passString = "1234567890";
+		const char *passString = "0123456789";
 		memset(&pass, 0, sizeof pass);
 		
 		pass.Length = strlen(passString);
@@ -134,15 +137,29 @@ protected:
 
 		cout << "Mounting volume" << endl;
 
-		BOOL res = Mount(15, L"D:\\vera_crypt\\vcd\\test_002.vcd", pass, -1, 0, 1);
+		BOOL res = Mount(24, L"D:\\vera_crypt\\vcd\\agent_test_002.vcd", L"YWW", pass, -1, 0, 1);
 
 		cout << "Volume mount result: " << res << endl;
+	}
 
+	void RunCreate() {
+		Password pass;
+		const char *passString = "0123456789";
+		memset(&pass, 0, sizeof pass);
+		
+		pass.Length = strlen(passString);
+		strcpy ((char *) &pass.Text[0], passString);
+
+		cout << "Create volume" << endl;
+
+		BOOL res = Create(24, L"D:\\vera_crypt\\vcd\\agent_test_002.vcd", pass, 1024 * 1024 * 1024, -1, 0, 1);
+
+		cout << "Volume Create result: " << res << endl;
 	}
 
 public:
 	void run() {
-		if (!LoadTrueCryptApi("TrueCryptApi.dll")) return;
+		if (!LoadTrueCryptApi("DataCubeVCApi64.dll")) return;
 		if (GetApiAddresses()) {
 			RunInitialize();
 
@@ -154,6 +171,7 @@ public:
 				cout << "LoadTrueCryptDriver version: " << hex << res << endl;
 			}
 
+			RunCreate();
 			RunMount();
 
 			RunShutdown();
@@ -167,7 +185,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	ApiTest *apiTest = new ApiTest();
 	apiTest->run();
  	delete apiTest;
-	cin.get();
+	// cin.get();
 	return 0;
 }
 
