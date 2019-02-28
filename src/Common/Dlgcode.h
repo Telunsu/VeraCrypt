@@ -319,6 +319,8 @@ void SavePostInstallTasksSettings (int command);
 void DoPostInstallTasks (HWND hwndDlg);
 void InitOSVersionInfo ();
 void InitApp ( HINSTANCE hInstance, wchar_t *lpszCommandLine );
+// Yww-
+void InitAppWhithoutHInstance ( wchar_t *lpszCommandLine );
 void FinalizeApp (void);
 void InitHelpFileName (void);
 BOOL OpenDevice (const wchar_t *lpszPath, OPEN_TEST_STRUCT *driver, BOOL detectFilesystem, BOOL computeVolumeID);

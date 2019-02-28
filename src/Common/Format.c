@@ -44,6 +44,10 @@
 int FormatWriteBufferSize = 1024 * 1024;
 static uint32 FormatSectorSize = 0;
 
+void SetFormatSectorSize(uint32 sector_size)
+{
+	FormatSectorSize = sector_size;
+}
 
 uint64 GetVolumeDataAreaSize (BOOL hiddenVolume, uint64 volumeSize)
 {
@@ -1575,8 +1579,10 @@ error:
 			goto fv_end;
 		}
 
-		if (!UnmountVolumeAfterFormatExCall (volParams->hwndDlg, driveNo) && !Silent)
+		if (!UnmountVolumeAfterFormatExCall (volParams->hwndDlg, driveNo) && !Silent) {
+			// SLOG_ERROR("CANT_DISMOUNT_VOLUME, driveNo = %d", driveNo);
 			MessageBoxW (volParams->hwndDlg, GetString ("CANT_DISMOUNT_VOLUME"), lpszTitle, ICON_HAND);
+		}
 	}
 
 fv_end:
@@ -2012,7 +2018,7 @@ static void __cdecl FormatWriteThreadProc (void *arg)
 }
 
 
-static BOOL StartFormatWriteThread ()
+BOOL StartFormatWriteThread ()
 {
 	DWORD sysErr;
 
@@ -2060,7 +2066,7 @@ err:
 }
 
 
-static void StopFormatWriteThread ()
+void StopFormatWriteThread ()
 {
 	if (WriteThreadRunning)
 	{

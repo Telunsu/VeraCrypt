@@ -995,6 +995,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 			int exitCode = 0;
 
 			MainDlg = hwndDlg;
+			SLOG_TRACE("WM_INITDIALOG, lw = %d", lw);
 
 			// Set critical default options in case UsePreferences is false
 			bPreserveTimestamp = defaultMountOptions.PreserveTimestamp = TRUE;
@@ -1002,16 +1003,17 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 			bHideWaitingDialog = FALSE;
 			bUseSecureDesktop = FALSE;
 
-			if (UsePreferences)
-			{
-				// General preferences
-				VeraCryptExpander::LoadSettings (hwndDlg);
-
-				// Keyfiles
-				LoadDefaultKeyFilesParam ();
-				RestoreDefaultKeyFilesParam ();
-			}
-
+			// Yww-
+			// if (UsePreferences)
+			// {
+			// 	// General preferences
+			// 	VeraCryptExpander::LoadSettings (hwndDlg);
+			// 
+			// 	// Keyfiles
+			// 	LoadDefaultKeyFilesParam ();
+			// 	RestoreDefaultKeyFilesParam ();
+			// }
+			// 
 			InitMainDialog (hwndDlg);
 
 			// Quit
@@ -1025,6 +1027,8 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_SYSCOMMAND:
+		SLOG_TRACE("WM_SYSCOMMAND");
+
 		if (lw == IDC_ABOUT)
 		{
 			DialogBoxW (hInst, MAKEINTRESOURCEW (IDD_ABOUT_DLG), hwndDlg, (DLGPROC) AboutDlgProc);
@@ -1033,12 +1037,15 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 		return 0;
 
 	case WM_ENDSESSION:
+		SLOG_TRACE("WM_ENDSESSION");
 		VeraCryptExpander::EndMainDlg (hwndDlg);
 		localcleanup ();
 		return 0;
 
 	case WM_COMMAND:
 
+		SLOG_TRACE("WM_COMMAND, lw = %d", lw);
+#if 0
 		if (lw == IDCANCEL || lw == IDC_EXIT)
 		{
 			VeraCryptExpander::EndMainDlg (hwndDlg);
@@ -1052,19 +1059,24 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 				Warning ("NO_VOLUME_SELECTED", hwndDlg);
 			}
 			else
-			{
-				wchar_t fileName[MAX_PATH];
-				GetWindowText (GetDlgItem (hwndDlg, IDC_VOLUME), fileName, ARRAYSIZE (fileName));
+#endif
+			if ( lw == IDOK ) {
+
+				wchar_t fileName[MAX_PATH] = L"D:\\vera_crypt\\vcd\\test.vcd";
+				// GetWindowText (GetDlgItem (hwndDlg, IDC_VOLUME), fileName, ARRAYSIZE (fileName));
+
 				ExpandVolumeWizard(hwndDlg, fileName);
+				return 1;
 			}
+#if 0
 			return 1;
 		}
 
-		if (lw == IDM_ABOUT )
-		{
-			DialogBoxW (hInst, MAKEINTRESOURCEW (IDD_ABOUT_DLG), hwndDlg, (DLGPROC) AboutDlgProc);
-			return 1;
-		}
+		// if (lw == IDM_ABOUT )
+		// {
+		// 	DialogBoxW (hInst, MAKEINTRESOURCEW (IDD_ABOUT_DLG), hwndDlg, (DLGPROC) AboutDlgProc);
+		// 	return 1;
+		// }
 
 		if (lw == IDM_HOMEPAGE )
 		{
@@ -1087,14 +1099,17 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 			SelectPartition (hwndDlg);
 			return 1;
 		}
-
+#endif
 		return 0;
 
+
 	case WM_CLOSE:
+		SLOG_TRACE("WM_CLOSE");
 		VeraCryptExpander::EndMainDlg (hwndDlg);
 		return 1;
 
 	default:
+//		SLOG_TRACE("default, do nth", lw);
 		;
 	}
 
@@ -1104,6 +1119,7 @@ BOOL CALLBACK MainDialogProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 }
 
 
+#ifndef DCUBE_API
 int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, wchar_t *lpszCommandLine, int nCmdShow)
 {
 	int status;
@@ -1116,6 +1132,7 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, wchar_t *lpsz
 	VirtualLock (&VeraCryptExpander::defaultMountOptions, sizeof (VeraCryptExpander::defaultMountOptions));
 	VirtualLock (&VeraCryptExpander::szFileName, sizeof(VeraCryptExpander::szFileName));
 
+	init_logger("C:\\Windows\\Temp\\", S_TRACE);
 	InitApp (hInstance, lpszCommandLine);
 
 	/* application title */
@@ -1141,3 +1158,5 @@ int WINAPI wWinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, wchar_t *lpsz
 	/* Terminate */
 	return 0;
 }
+#endif
+

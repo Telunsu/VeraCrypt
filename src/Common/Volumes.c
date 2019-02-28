@@ -219,7 +219,7 @@ int ReadVolumeHeader (BOOL bBoot, char *encryptedHeader, Password *password, int
 	/* use thread pool only if no PRF was specified */
 	if ((selected_pkcs5_prf == 0) && (encryptionThreadCount > 1))
 	{
-		keyDerivationWorkItems = TCalloc (sizeof (KeyDerivationWorkItem) * pkcs5PrfCount);
+		keyDerivationWorkItems = (KeyDerivationWorkItem*)TCalloc (sizeof (KeyDerivationWorkItem) * pkcs5PrfCount);
 		if (!keyDerivationWorkItems)
 			return ERR_OUTOFMEMORY;
 
@@ -254,7 +254,7 @@ int ReadVolumeHeader (BOOL bBoot, char *encryptedHeader, Password *password, int
 #endif
 #endif //  !defined(_UEFI)
 
-	crypto_loadkey (&keyInfo, password->Text, (int) password->Length);
+	crypto_loadkey (&keyInfo, (char*)password->Text, (int) password->Length);
 
 	// PKCS5 is used to derive the primary header key(s) and secondary header key(s) (XTS mode) from the password
 	memcpy (keyInfo.salt, encryptedHeader + HEADER_SALT_OFFSET, PKCS5_SALT_SIZE);
@@ -385,7 +385,7 @@ KeyReady:	;
 
 				blockSize = CipherGetBlockSize (EAGetFirstCipher (cryptoInfo->ea));
 
-				status = EAInit (cryptoInfo->ea, dk + primaryKeyOffset, cryptoInfo->ks);
+				status = EAInit (cryptoInfo->ea, (unsigned char*)dk + primaryKeyOffset, cryptoInfo->ks);
 				if (status == ERR_CIPHER_INIT_FAILURE)
 					goto err;
 
@@ -413,16 +413,16 @@ KeyReady:	;
 
 				// Try to decrypt header
 
-				DecryptBuffer (header + HEADER_ENCRYPTED_DATA_OFFSET, HEADER_ENCRYPTED_DATA_SIZE, cryptoInfo);
+				DecryptBuffer ((unsigned char*)header + HEADER_ENCRYPTED_DATA_OFFSET, HEADER_ENCRYPTED_DATA_SIZE, cryptoInfo);
 
 				// Magic 'VERA' or 'TRUE' depending if we are in TrueCrypt mode or not
-				if ((truecryptMode && GetHeaderField32 (header, TC_HEADER_OFFSET_MAGIC) != 0x54525545)
-					|| (!truecryptMode && GetHeaderField32 (header, TC_HEADER_OFFSET_MAGIC) != 0x56455241)
+				if ((truecryptMode && GetHeaderField32 ((byte*)header, TC_HEADER_OFFSET_MAGIC) != 0x54525545)
+					|| (!truecryptMode && GetHeaderField32 ((byte*)header, TC_HEADER_OFFSET_MAGIC) != 0x56455241)
 					)
 					continue;
 
 				// Header version
-				headerVersion = GetHeaderField16 (header, TC_HEADER_OFFSET_VERSION);
+				headerVersion = GetHeaderField16 ((byte*)header, TC_HEADER_OFFSET_VERSION);
 
 				if (headerVersion > VOLUME_HEADER_VERSION)
 				{
@@ -433,11 +433,11 @@ KeyReady:	;
 				// Check CRC of the header fields
 				if (!ReadVolumeHeaderRecoveryMode
 					&& headerVersion >= 4
-					&& GetHeaderField32 (header, TC_HEADER_OFFSET_HEADER_CRC) != GetCrc32 (header + TC_HEADER_OFFSET_MAGIC, TC_HEADER_OFFSET_HEADER_CRC - TC_HEADER_OFFSET_MAGIC))
+					&& GetHeaderField32 ((byte*)header, TC_HEADER_OFFSET_HEADER_CRC) != GetCrc32 ((unsigned char*)header + TC_HEADER_OFFSET_MAGIC, TC_HEADER_OFFSET_HEADER_CRC - TC_HEADER_OFFSET_MAGIC))
 					continue;
 
 				// Required program version
-				cryptoInfo->RequiredProgramVersion = GetHeaderField16 (header, TC_HEADER_OFFSET_REQUIRED_VERSION);
+				cryptoInfo->RequiredProgramVersion = GetHeaderField16 ((byte*)header, TC_HEADER_OFFSET_REQUIRED_VERSION);
 				if (truecryptMode)
 				{
 					if (cryptoInfo->RequiredProgramVersion < 0x600 || cryptoInfo->RequiredProgramVersion > 0x71a)
@@ -452,7 +452,7 @@ KeyReady:	;
 
 				// Check CRC of the key set
 				if (!ReadVolumeHeaderRecoveryMode
-					&& GetHeaderField32 (header, TC_HEADER_OFFSET_KEY_AREA_CRC) != GetCrc32 (header + HEADER_MASTER_KEYDATA_OFFSET, MASTER_KEYDATA_SIZE))
+					&& GetHeaderField32 ((byte*)header, TC_HEADER_OFFSET_KEY_AREA_CRC) != GetCrc32 ((unsigned char*)header + HEADER_MASTER_KEYDATA_OFFSET, MASTER_KEYDATA_SIZE))
 					continue;
 
 				// Now we have the correct password, cipher, hash algorithm, and volume type
@@ -468,30 +468,30 @@ KeyReady:	;
 				cryptoInfo->HeaderVersion = headerVersion;
 
 				// Volume creation time (legacy)
-				cryptoInfo->volume_creation_time = GetHeaderField64 (header, TC_HEADER_OFFSET_VOLUME_CREATION_TIME).Value;
+				cryptoInfo->volume_creation_time = GetHeaderField64 ((byte*)header, TC_HEADER_OFFSET_VOLUME_CREATION_TIME).Value;
 
 				// Header creation time (legacy)
-				cryptoInfo->header_creation_time = GetHeaderField64 (header, TC_HEADER_OFFSET_MODIFICATION_TIME).Value;
+				cryptoInfo->header_creation_time = GetHeaderField64 ((byte*)header, TC_HEADER_OFFSET_MODIFICATION_TIME).Value;
 
 				// Hidden volume size (if any)
-				cryptoInfo->hiddenVolumeSize = GetHeaderField64 (header, TC_HEADER_OFFSET_HIDDEN_VOLUME_SIZE).Value;
+				cryptoInfo->hiddenVolumeSize = GetHeaderField64 ((byte*)header, TC_HEADER_OFFSET_HIDDEN_VOLUME_SIZE).Value;
 
 				// Hidden volume status
 				cryptoInfo->hiddenVolume = (cryptoInfo->hiddenVolumeSize != 0);
 
 				// Volume size
-				cryptoInfo->VolumeSize = GetHeaderField64 (header, TC_HEADER_OFFSET_VOLUME_SIZE);
+				cryptoInfo->VolumeSize = GetHeaderField64 ((byte*)header, TC_HEADER_OFFSET_VOLUME_SIZE);
 
 				// Encrypted area size and length
-				cryptoInfo->EncryptedAreaStart = GetHeaderField64 (header, TC_HEADER_OFFSET_ENCRYPTED_AREA_START);
-				cryptoInfo->EncryptedAreaLength = GetHeaderField64 (header, TC_HEADER_OFFSET_ENCRYPTED_AREA_LENGTH);
+				cryptoInfo->EncryptedAreaStart = GetHeaderField64 ((byte*)header, TC_HEADER_OFFSET_ENCRYPTED_AREA_START);
+				cryptoInfo->EncryptedAreaLength = GetHeaderField64 ((byte*)header, TC_HEADER_OFFSET_ENCRYPTED_AREA_LENGTH);
 
 				// Flags
-				cryptoInfo->HeaderFlags = GetHeaderField32 (header, TC_HEADER_OFFSET_FLAGS);
+				cryptoInfo->HeaderFlags = GetHeaderField32 ((byte*)header, TC_HEADER_OFFSET_FLAGS);
 
 				// Sector size
 				if (headerVersion >= 5)
-					cryptoInfo->SectorSize = GetHeaderField32 (header, TC_HEADER_OFFSET_SECTOR_SIZE);
+					cryptoInfo->SectorSize = GetHeaderField32 ((byte*)header, TC_HEADER_OFFSET_SECTOR_SIZE);
 				else
 					cryptoInfo->SectorSize = TC_SECTOR_SIZE_LEGACY;
 
@@ -537,7 +537,7 @@ KeyReady:	;
 				cryptoInfo->volumePim = pim;
 
 				// Init the cipher with the decrypted master key
-				status = EAInit (cryptoInfo->ea, keyInfo.master_keydata + primaryKeyOffset, cryptoInfo->ks);
+				status = EAInit (cryptoInfo->ea, (unsigned char*)keyInfo.master_keydata + primaryKeyOffset, cryptoInfo->ks);
 				if (status == ERR_CIPHER_INIT_FAILURE)
 					goto err;
 
@@ -862,7 +862,7 @@ int CreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, int ea, 
 		}
 
 #if !defined(_UEFI)
-		if (!RandgetBytes (hwndDlg, keyInfo.master_keydata, bytesNeeded, TRUE))
+		if (!RandgetBytes (hwndDlg, (unsigned char*)keyInfo.master_keydata, bytesNeeded, TRUE))
 #else
 		if (!RandgetBytes(keyInfo.master_keydata, bytesNeeded, TRUE))
 #endif
@@ -905,7 +905,7 @@ int CreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, int ea, 
 
 	// Salt for header key derivation
 #if !defined(_UEFI)
-	if (!RandgetBytes(hwndDlg, keyInfo.salt, PKCS5_SALT_SIZE, !bWipeMode))
+	if (!RandgetBytes(hwndDlg, (unsigned char*)keyInfo.salt, PKCS5_SALT_SIZE, !bWipeMode))
 #else
 	if (!RandgetBytes(keyInfo.salt, PKCS5_SALT_SIZE, !bWipeMode))
 #endif
@@ -955,7 +955,7 @@ int CreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, int ea, 
 	{
 		// generate a random key
 #if !defined(_UEFI)
-		if (!RandgetBytes(hwndDlg, dk, GetMaxPkcs5OutSize(), !bWipeMode))
+		if (!RandgetBytes(hwndDlg, (unsigned char*)dk, GetMaxPkcs5OutSize(), !bWipeMode))
 #else
 		if (!RandgetBytes(dk, GetMaxPkcs5OutSize(), !bWipeMode))
 #endif
@@ -982,7 +982,7 @@ int CreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, int ea, 
 	mputWord (p, requiredProgramVersion != 0 ? requiredProgramVersion : TC_VOLUME_MIN_REQUIRED_PROGRAM_VERSION);
 
 	// CRC of the master key data
-	x = GetCrc32(keyInfo.master_keydata, MASTER_KEYDATA_SIZE);
+	x = GetCrc32((unsigned char*)keyInfo.master_keydata, MASTER_KEYDATA_SIZE);
 	mputLong (p, x);
 
 	// Reserved fields
@@ -1023,8 +1023,8 @@ int CreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, int ea, 
 	mputLong (p, sectorSize);
 
 	// CRC of the header fields
-	x = GetCrc32 (header + TC_HEADER_OFFSET_MAGIC, TC_HEADER_OFFSET_HEADER_CRC - TC_HEADER_OFFSET_MAGIC);
-	p = header + TC_HEADER_OFFSET_HEADER_CRC;
+	x = GetCrc32 ((unsigned char*)header + TC_HEADER_OFFSET_MAGIC, TC_HEADER_OFFSET_HEADER_CRC - TC_HEADER_OFFSET_MAGIC);
+	p = (unsigned char*)header + TC_HEADER_OFFSET_HEADER_CRC;
 	mputLong (p, x);
 
 	// The master key data
@@ -1042,7 +1042,7 @@ int CreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, int ea, 
 		primaryKeyOffset = 0;
 	}
 
-	retVal = EAInit (cryptoInfo->ea, dk + primaryKeyOffset, cryptoInfo->ks);
+	retVal = EAInit (cryptoInfo->ea, (unsigned char*)dk + primaryKeyOffset, cryptoInfo->ks);
 	if (retVal != ERR_SUCCESS)
 	{
 		crypto_close (cryptoInfo);
@@ -1059,7 +1059,7 @@ int CreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, int ea, 
 
 
 	// Encrypt the entire header (except the salt)
-	EncryptBuffer (header + HEADER_ENCRYPTED_DATA_OFFSET,
+	EncryptBuffer ((unsigned char*)header + HEADER_ENCRYPTED_DATA_OFFSET,
 		HEADER_ENCRYPTED_DATA_SIZE,
 		cryptoInfo);
 
@@ -1067,7 +1067,7 @@ int CreateVolumeHeaderInMemory (HWND hwndDlg, BOOL bBoot, char *header, int ea, 
 	/* cryptoInfo setup for further use (disk format) */
 
 	// Init with the master key(s)
-	retVal = EAInit (cryptoInfo->ea, keyInfo.master_keydata + primaryKeyOffset, cryptoInfo->ks);
+	retVal = EAInit (cryptoInfo->ea, (unsigned char*)keyInfo.master_keydata + primaryKeyOffset, cryptoInfo->ks);
 	if (retVal != ERR_SUCCESS)
 	{
 		crypto_close (cryptoInfo);
@@ -1274,14 +1274,14 @@ int WriteRandomDataToReservedHeaderAreas (HWND hwndDlg, HANDLE dev, CRYPTO_INFO 
 	while (TRUE)
 	{
 		// Temporary keys
-		if (!RandgetBytes (hwndDlg, temporaryKey, EAGetKeySize (cryptoInfo->ea), FALSE)
+		if (!RandgetBytes (hwndDlg, (unsigned char*)temporaryKey, EAGetKeySize (cryptoInfo->ea), FALSE)
 			|| !RandgetBytes (hwndDlg, cryptoInfo->k2, sizeof (cryptoInfo->k2), FALSE))
 		{
 			nStatus = ERR_PARAMETER_INCORRECT;
 			goto final_seq;
 		}
 
-		nStatus = EAInit (cryptoInfo->ea, temporaryKey, cryptoInfo->ks);
+		nStatus = EAInit (cryptoInfo->ea, (unsigned char*)temporaryKey, cryptoInfo->ks);
 		if (nStatus != ERR_SUCCESS)
 			goto final_seq;
 

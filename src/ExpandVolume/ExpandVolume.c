@@ -37,6 +37,7 @@
 #include "InitDataArea.h"
 #include "ExpandVolume.h"
 #include "Resource.h"
+#include "Log.h"
 
 #ifndef SRC_POS
 #define SRC_POS (__FUNCTION__ ":" TC_TO_STRING(__LINE__))
@@ -104,7 +105,7 @@ int MountVolTemp (HWND hwndDlg, wchar_t *volumePath, int *driveNo, Password *pas
 	mountOptions.PartitionInInactiveSysEncScope = FALSE;
 	mountOptions.UseBackupHeader = FALSE;
 
-	if (MountVolume (hwndDlg, *driveNo, volumePath, password, pkcs5, pim, FALSE, FALSE, FALSE, TRUE, &mountOptions, FALSE, FALSE) < 1)
+	if (MountVolume (hwndDlg, *driveNo, volumePath, password, pkcs5, pim, FALSE, FALSE, FALSE, TRUE, &mountOptions, TRUE, FALSE) < 1)
 	{
 		*driveNo = -3;
 		return ERR_VOL_MOUNT_FAILED;
@@ -347,7 +348,6 @@ BOOL GetNtfsNumberOfSectors(wchar_t * rootPath, uint64 * pNumberOfSectors, DWORD
 	return (bResult);
 }
 
-
 uint64 GetVolumeDataAreaSize (uint64 volumeSize, BOOL legacyVolume)
 {
 	uint64 reservedSize;
@@ -389,14 +389,17 @@ int ExtendFileSystem (HWND hwndDlg , wchar_t *lpszVolume, Password *pVolumePassw
 
 	// mount and resize file system
 
-	DebugAddProgressDlgStatus (hwndDlg, L"Mounting volume ...\r\n");
+	SLOG_INFO("Mounting volume...");
+	// DebugAddProgressDlgStatus (hwndDlg, L"Mounting volume ...\r\n");
 
 	nStatus=MountVolTemp(hwndDlg, lpszVolume, &driveNo, pVolumePassword, VolumePkcs5, VolumePim);
 	if (nStatus!=ERR_SUCCESS)
 	{
+		SLOG_ERROR("MountVolTemp failed, nStatus = %d", nStatus);
 		driveNo = -1;
 		goto error;
 	}
+	SLOG_INFO("MountVolTemp return succ.");
 
 	rootPath[0] += driveNo;
 
@@ -441,18 +444,20 @@ int ExtendFileSystem (HWND hwndDlg , wchar_t *lpszVolume, Password *pVolumePassw
 		goto error;
 	}
 
-	DebugAddProgressDlgStatus (hwndDlg, L"Extending file system ...\r\n");
+	// DebugAddProgressDlgStatus (hwndDlg, L"Extending file system ...\r\n");
+	SLOG_INFO("Extending file system ...");
 
 	// extend volume
 	nStatus = FsctlExtendVolume(szVolumeGUID, newDataAreaSize/BytesPerSector );
 
+	SLOG_INFO("FsctlExtendVolume return nStatus = %d", nStatus);
 error:
 
 	dwError = GetLastError();
 
 	if (driveNo>=0)
 	{
-		DebugAddProgressDlgStatus (hwndDlg, L"Unmounting volume ...\r\n");
+		// DebugAddProgressDlgStatus (hwndDlg, L"Unmounting volume ...\r\n");
 		UnmountVolume (hwndDlg, driveNo, TRUE);
 	}
 
@@ -844,7 +849,7 @@ static int ExpandVolume (HWND hwndDlg, wchar_t *lpszVolume, Password *pVolumePas
 			goto error;
 		}
 
-		if (!WriteEffectiveVolumeHeader (bDevice, dev, buffer))
+		if (!WriteEffectiveVolumeHeader (bDevice, dev, (byte*)buffer))
 		{
 			nStatus = ERR_OS_ERROR;
 			goto error;
@@ -900,7 +905,7 @@ static int ExpandVolume (HWND hwndDlg, wchar_t *lpszVolume, Password *pVolumePas
 				goto error;
 			}
 
-			if (!WriteEffectiveVolumeHeader (bDevice, dev, buffer))
+			if (!WriteEffectiveVolumeHeader (bDevice, dev, (byte*)buffer))
 			{
 				nStatus = ERR_OS_ERROR;
 				goto error;
@@ -1054,3 +1059,603 @@ void __cdecl volTransformThreadFunction (void *pExpandDlgParam)
 
 	_endthread ();
 }
+
+int DataCubeExpandVolume (wchar_t *lpszVolume, Password *pVolumePassword, int VolumePkcs5, int VolumePim, unsigned long long gb, BOOL initFreeSpace)
+{
+	uint64 newHostSize = gb * 1024 * 1024 * 1024;
+	int nDosLinkCreated = 1, nStatus = ERR_OS_ERROR;
+	wchar_t szDiskFile[TC_MAX_PATH], szCFDevice[TC_MAX_PATH];
+	wchar_t szDosDevice[TC_MAX_PATH];
+
+	char buffer[TC_VOLUME_HEADER_EFFECTIVE_SIZE];
+	PCRYPTO_INFO cryptoInfo = NULL, ci = NULL;
+	void *dev = INVALID_HANDLE_VALUE;
+	DWORD dwError;
+	BOOL bDevice;
+	uint64 hostSize=0, newDataAreaSize, currentVolSize;
+	DWORD HostSectorSize;
+	FILETIME ftCreationTime;
+	FILETIME ftLastWriteTime;
+	FILETIME ftLastAccessTime;
+	BOOL bTimeStampValid = FALSE;
+	LARGE_INTEGER headerOffset;
+	BOOL backupHeader;
+	byte *wipeBuffer = NULL;
+	uint32 workChunkSize = TC_VOLUME_HEADER_GROUP_SIZE;
+
+	SLOG_ERROR("=========");
+	if (pVolumePassword->Length == 0) return -1;
+	SLOG_ERROR("pVolumePassword = %s", pVolumePassword->Text);
+
+	WaitCursor ();
+
+	CreateFullVolumePath (szDiskFile, sizeof(szDiskFile), lpszVolume, &bDevice);
+
+	if (bDevice == FALSE)
+	{
+		wcscpy (szCFDevice, szDiskFile);
+	}
+	else
+	{
+		nDosLinkCreated = FakeDosNameForDevice (szDiskFile, szDosDevice, sizeof(szDosDevice), szCFDevice, sizeof(szCFDevice), FALSE);
+
+		if (nDosLinkCreated != 0) // note: nStatus == ERR_OS_ERROR
+			goto error;
+	}
+
+	dev = CreateFile (szCFDevice, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+
+	if (dev == INVALID_HANDLE_VALUE)
+		goto error;
+
+	if (bDevice)
+	{
+		/* This is necessary to determine the hidden volume header offset */
+
+		if (dev == INVALID_HANDLE_VALUE)
+		{
+			goto error;
+		}
+		else
+		{
+			PARTITION_INFORMATION diskInfo;
+			DWORD dwResult;
+			BOOL bResult;
+
+			bResult = GetPartitionInfo (lpszVolume, &diskInfo);
+
+			if (bResult)
+			{
+				hostSize = diskInfo.PartitionLength.QuadPart;
+				HostSectorSize = TC_SECTOR_SIZE_FILE_HOSTED_VOLUME; //TO DO: get the real host disk sector size
+			}
+			else
+			{
+				BYTE dgBuffer[256];
+
+				bResult = DeviceIoControl (dev, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0,
+					dgBuffer, sizeof (dgBuffer), &dwResult, NULL);
+
+				if (!bResult)
+				{
+					DISK_GEOMETRY geo;
+					if (DeviceIoControl (dev, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, (LPVOID) &geo, sizeof (geo), &dwResult, NULL))
+					{
+						hostSize = geo.Cylinders.QuadPart * geo.SectorsPerTrack * geo.TracksPerCylinder * geo.BytesPerSector;
+						HostSectorSize = geo.BytesPerSector;
+
+						if (CurrentOSMajor >= 6)
+						{
+							STORAGE_READ_CAPACITY storage = {0};
+
+							storage.Version = sizeof (STORAGE_READ_CAPACITY);
+							storage.Size = sizeof (STORAGE_READ_CAPACITY);
+							if (DeviceIoControl (dev, IOCTL_STORAGE_READ_CAPACITY, NULL, 0, (LPVOID) &storage, sizeof (storage), &dwResult, NULL)
+								&& (dwResult >= sizeof (storage))
+								&& (storage.Size == sizeof (STORAGE_READ_CAPACITY))
+								)
+							{
+								hostSize = storage.DiskLength.QuadPart;
+							}
+						}
+					}
+					else
+					{
+						goto error;
+					}
+				}
+				else
+				{
+					hostSize = ((PDISK_GEOMETRY_EX) dgBuffer)->DiskSize.QuadPart;
+					HostSectorSize = ((PDISK_GEOMETRY_EX) dgBuffer)->Geometry.BytesPerSector;
+				}
+			}
+
+			if (hostSize == 0)
+			{
+				nStatus = ERR_VOL_SIZE_WRONG;
+				goto error;
+			}
+		}
+	}
+	else
+	{
+		LARGE_INTEGER fileSize;
+		if (!GetFileSizeEx (dev, &fileSize))
+		{
+			SLOG_ERROR("GetFileSizeEx failed");
+			nStatus = ERR_OS_ERROR;
+			goto error;
+		}
+		SLOG_INFO("GetFileSizeEx succ, fileSize = %llu", fileSize);
+
+		hostSize = fileSize.QuadPart;
+		HostSectorSize = TC_SECTOR_SIZE_FILE_HOSTED_VOLUME; //TO DO: get the real host disk sector size
+	}
+
+	if (Randinit ())
+	{
+		if (CryptoAPILastError == ERROR_SUCCESS)
+			nStatus = ERR_RAND_INIT_FAILED;
+		else
+			nStatus = ERR_CAPI_INIT_FAILED;
+		goto error;
+	}
+
+	if (!bDevice && bPreserveTimestamp)
+	{
+		/* Remember the container modification/creation date and time, (used to reset file date and time of
+		file-hosted volumes after password change (or attempt to), in order to preserve plausible deniability
+		of hidden volumes (last password change time is stored in the volume header). */
+
+		if (GetFileTime ((HANDLE) dev, &ftCreationTime, &ftLastAccessTime, &ftLastWriteTime) == 0)
+		{
+			bTimeStampValid = FALSE;
+			// Yww-
+			// MessageBoxW (hwndDlg, GetString ("GETFILETIME_FAILED_PW"), lpszTitle, MB_OK | MB_ICONEXCLAMATION);
+		}
+		else
+			bTimeStampValid = TRUE;
+	}
+
+	// Seek the volume header
+	headerOffset.QuadPart = TC_VOLUME_HEADER_OFFSET;
+
+	if (!SetFilePointerEx ((HANDLE) dev, headerOffset, NULL, FILE_BEGIN))
+	{
+		nStatus = ERR_OS_ERROR;
+		SLOG_ERROR("SetFilePointerEx failed.");
+		goto error;
+	}
+
+	/* Read in volume header */
+	nStatus = _lread ((HFILE) dev, buffer, sizeof (buffer));
+	if (nStatus != sizeof (buffer))
+	{
+		// Windows may report EOF when reading sectors from the last cluster of a device formatted as NTFS
+		memset (buffer, 0, sizeof (buffer));
+	}
+
+	/* Try to decrypt the header */
+	SLOG_TRACE("VolumePkcs5 = %d, VolumePim = %d", VolumePkcs5, VolumePim);
+   	nStatus = ReadVolumeHeader (FALSE, buffer, pVolumePassword, VolumePkcs5, VolumePim, FALSE, &cryptoInfo, NULL);
+	if (nStatus == ERR_CIPHER_INIT_WEAK_KEY)
+		nStatus = 0;	// We can ignore this error here
+
+	if (nStatus != 0)
+	{
+		cryptoInfo = NULL;
+		SLOG_ERROR("ReadVolumeHeader nStatus = %d.", nStatus);
+		goto error;
+	}
+
+	if (cryptoInfo->HeaderFlags & TC_HEADER_FLAG_ENCRYPTED_SYSTEM)
+	{
+		nStatus = ERR_SYS_HIDVOL_HEAD_REENC_MODE_WRONG;
+		SLOG_ERROR("ERR_SYS_HIDVOL_HEAD_REENC_MODE_WRONG");
+		goto error;
+	}
+
+	if (bDevice && newHostSize == 0)
+	{
+		// this means we shall take all host space as new volume size
+		newHostSize = hostSize;
+	}
+
+	// if ( newHostSize % cryptoInfo->SectorSize != 0  || newHostSize > TC_MAX_VOLUME_SIZE || (bDevice && newHostSize > hostSize) )
+	if ( newHostSize % cryptoInfo->SectorSize != 0  || (bDevice && newHostSize > hostSize) )
+	{
+		// 1. must be multiple of sector size
+		// 2. truecrypt volume size limit
+		// 3. for devices volume size can't be larger than host size
+		cryptoInfo = NULL;
+		nStatus = ERR_PARAMETER_INCORRECT;
+		SLOG_ERROR("ERR_PARAMETER_INCORRECT");
+		goto error;
+	}
+
+	newDataAreaSize = GetVolumeDataAreaSize (newHostSize, cryptoInfo->LegacyVolume);
+	SLOG_TRACE("newDataAreaSize = %lu, newHostSize = %lu", newDataAreaSize, newHostSize);
+
+	if (cryptoInfo->LegacyVolume)
+	{
+		if (bDevice)
+		{
+			if (initFreeSpace)
+			{
+				SLOG_ERROR("initFreeSpace is TRUE, but unsupported.");
+				// unsupported
+				cryptoInfo = NULL;
+				nStatus = ERR_PARAMETER_INCORRECT;
+				goto error;
+			}
+			else
+			{
+				// note: dummy value (only used for parameter checks)
+				cryptoInfo->VolumeSize.Value = newDataAreaSize - TC_MINVAL_FS_EXPAND;
+			}
+		}
+		else
+		{
+			cryptoInfo->VolumeSize.Value = GetVolumeDataAreaSize (hostSize, TRUE);
+		}
+	}
+
+	currentVolSize = GetVolumeSizeByDataAreaSize (cryptoInfo->VolumeSize.Value, cryptoInfo->LegacyVolume);
+
+	if ( newDataAreaSize < cryptoInfo->VolumeSize.Value + TC_MINVAL_FS_EXPAND )
+	{
+		// shrinking a volume or enlarging by less then TC_MINVAL_FS_EXPAND is not allowed
+		cryptoInfo = NULL;
+		nStatus = ERR_PARAMETER_INCORRECT;
+		goto error;
+	}
+
+	// InitProgressBar ( newHostSize, currentVolSize, FALSE, FALSE, FALSE, TRUE);
+
+	if (bVolTransformThreadCancel)
+	{
+		SetLastError(0);
+		nStatus = ERR_USER_ABORT;
+		goto error;
+	}
+
+	if (!bDevice) {
+		LARGE_INTEGER liNewSize;
+		int64 newHostSizeBak = newHostSize;
+		memset(&liNewSize, 0, sizeof(LARGE_INTEGER));
+		if (newHostSizeBak < 0) {
+			newHostSizeBak = -newHostSizeBak;
+		}
+
+		liNewSize.QuadPart=(LONGLONG)newHostSizeBak;
+
+		// Preallocate the file
+		SLOG_ERROR("newHostSize = %lu, newHostSizeBak = %lld", newHostSize, newHostSizeBak);
+		SLOG_ERROR("liNewSize.HighPart = %lld", liNewSize.HighPart);
+		SLOG_ERROR("liNewSize.QuadPart = %lld", liNewSize.QuadPart);
+		SLOG_ERROR("liNewSize.LowPart = %lld", liNewSize.LowPart);
+
+		if (!SetFilePointerEx (dev, liNewSize, NULL, 0)) 
+		// if (!SetFilePointerEx (dev, liNewSize, NULL, FILE_BEGIN)) 
+		{
+			DWORD last_error = GetLastError();
+			SLOG_INFO("Preallocate the file failed, last_error = %d", last_error);
+			nStatus = ERR_OS_ERROR;
+			goto error;
+		}
+
+		if (!SetEndOfFile (dev)) 
+		{
+			DWORD last_error = GetLastError();
+			SLOG_INFO("Preallocate the file failed, last_error = %d", last_error);
+			nStatus = ERR_OS_ERROR;
+			goto error;
+		}
+
+		if (SetFilePointer (dev, 0, NULL, FILE_BEGIN) != 0)
+		{
+			DWORD last_error = GetLastError();
+			SLOG_INFO("Preallocate the file failed, last_error = %d", last_error);
+			nStatus = ERR_OS_ERROR;
+			goto error;
+		}
+	}
+
+	if (initFreeSpace)
+	{
+		uint64 startSector;
+		int64 num_sectors;
+
+		// fill new space with random data
+		startSector = currentVolSize/HostSectorSize ;
+		num_sectors = (newHostSize/HostSectorSize) - startSector;
+
+		if (bDevice && !StartFormatWriteThread())
+		{
+			SLOG_ERROR("bDevice is TRUE and StartFormatWriteThread return FALSE");
+			nStatus = ERR_OS_ERROR;
+			goto error;
+		}
+
+		// Yww-
+		// DebugAddProgressDlgStatus(hwndDlg, L"Writing random data to new space ...\r\n");
+
+		SetFormatSectorSize(HostSectorSize);
+		nStatus = DataCubeFormatNoFs (startSector, num_sectors, dev, cryptoInfo, FALSE);
+		SLOG_INFO("DataCubeFormatNoFs nStatus = %d", nStatus);
+
+		dwError = GetLastError();
+		StopFormatWriteThread();
+		SetLastError (dwError);
+	}
+
+	if (nStatus != ERR_SUCCESS)
+	{
+		dwError = GetLastError();
+		SLOG_ERROR("Error: failed to write random data...");
+		// Yww-
+		// DebugAddProgressDlgStatus(hwndDlg, L"Error: failed to write random data ...\r\n");
+		if ( !bDevice ) {
+			// restore original size of the container file
+			LARGE_INTEGER liOldSize;
+			liOldSize.QuadPart=(LONGLONG)hostSize;
+			if (!SetFilePointerEx (dev, liOldSize, NULL, FILE_BEGIN) || !SetEndOfFile (dev))
+			{
+				SLOG_ERROR("Warning: failed to restore original size of the container file.");
+			}
+		}
+		SetLastError (dwError);
+		goto error;
+	}
+
+	RandSetHashFunction (cryptoInfo->pkcs5);
+
+	// Re-encrypt the volume header forn non-legacy volumes: backup header first
+	backupHeader = TRUE;
+	headerOffset.QuadPart = TC_VOLUME_HEADER_OFFSET + newHostSize - TC_VOLUME_HEADER_GROUP_SIZE;
+
+	SLOG_TRACE("Try to updating the header for legay volumes.");
+	/* note: updating the header is not neccessary for legay volumes */
+	while ( !cryptoInfo->LegacyVolume )
+	{
+		if (backupHeader)
+			SLOG_TRACE("Writing re-encrypted backup header ...");
+		else
+			SLOG_TRACE("Writing re-encrypted primary header ...");
+
+		// Prepare new volume header
+		nStatus = DataCubeCreateVolumeHeaderInMemory (NULL, FALSE,
+			buffer,
+			cryptoInfo->ea,
+			cryptoInfo->mode,
+			pVolumePassword,
+			cryptoInfo->pkcs5,
+			VolumePim,
+			(char*)(cryptoInfo->master_keydata),
+			&ci,
+			newDataAreaSize,
+			0, // hiddenVolumeSize
+			cryptoInfo->EncryptedAreaStart.Value,
+			newDataAreaSize,
+			cryptoInfo->RequiredProgramVersion,
+			cryptoInfo->HeaderFlags,
+			cryptoInfo->SectorSize,
+			FALSE ); // use slow poll
+
+		if (ci != NULL)
+			crypto_close (ci);
+
+		if (nStatus != 0)
+			goto error;
+
+		if (!SetFilePointerEx ((HANDLE) dev, headerOffset, NULL, FILE_BEGIN))
+		{
+			SLOG_ERROR("SetFilePointerEx return false, headerOffSet = %lld", headerOffset);
+			nStatus = ERR_OS_ERROR;
+			goto error;
+		}
+
+		if (!WriteEffectiveVolumeHeader (bDevice, dev, (byte*)buffer))
+		{
+			SLOG_ERROR("WriteEffectiveVolumeHeader return false");
+			nStatus = ERR_OS_ERROR;
+			goto error;
+		}
+
+		if ( ( backupHeader && !initFreeSpace )
+			|| ( bDevice
+				&& !cryptoInfo->LegacyVolume
+				&& !cryptoInfo->hiddenVolume
+				&& cryptoInfo->HeaderVersion == 4	// BUG in TrueCrypt: doing this only for v4 make no sense
+				&& (cryptoInfo->HeaderFlags & TC_HEADER_FLAG_NONSYS_INPLACE_ENC) != 0
+				&& (cryptoInfo->HeaderFlags & ~TC_HEADER_FLAG_NONSYS_INPLACE_ENC) == 0 )
+			)
+		{
+			//DebugAddProgressDlgStatus(hwndDlg, L"WriteRandomDataToReservedHeaderAreas() ...\r\n");
+			PCRYPTO_INFO dummyInfo = NULL;
+			LARGE_INTEGER hiddenOffset;
+
+			nStatus = WriteRandomDataToReservedHeaderAreas (NULL, dev, cryptoInfo, newDataAreaSize, !backupHeader, backupHeader);
+			if (nStatus != ERR_SUCCESS)
+				goto error;
+
+			// write fake hidden volume header to protect against attacks that use statistical entropy
+			// analysis to detect presence of hidden volumes
+			hiddenOffset.QuadPart = headerOffset.QuadPart + TC_HIDDEN_VOLUME_HEADER_OFFSET;
+
+			nStatus = DataCubeCreateVolumeHeaderInMemory (NULL, FALSE,
+				buffer,
+				cryptoInfo->ea,
+				cryptoInfo->mode,
+				NULL,
+				0,
+				0,
+				NULL,
+				&dummyInfo,
+				newDataAreaSize,
+				newDataAreaSize, // hiddenVolumeSize
+				cryptoInfo->EncryptedAreaStart.Value,
+				newDataAreaSize,
+				cryptoInfo->RequiredProgramVersion,
+				cryptoInfo->HeaderFlags,
+				cryptoInfo->SectorSize,
+				FALSE ); // use slow poll
+
+			if (nStatus != ERR_SUCCESS) {
+				SLOG_ERROR("DataCubeCreateVolumeHeaderInMemory return nStatus = %d", nStatus);
+				goto error;
+			}
+
+			crypto_close (dummyInfo);
+
+			if (!SetFilePointerEx ((HANDLE) dev, hiddenOffset, NULL, FILE_BEGIN))
+			{
+				SLOG_ERROR("SetFilePointerEx return False");
+				nStatus = ERR_OS_ERROR;
+				goto error;
+			}
+
+			if (!WriteEffectiveVolumeHeader (bDevice, dev, (byte*)buffer))
+			{
+				SLOG_ERROR("WriteEffectiveVolumeHeader return False");
+				nStatus = ERR_OS_ERROR;
+				goto error;
+			}
+		}
+
+		FlushFileBuffers (dev);
+
+		if (!backupHeader)
+			break;
+
+		backupHeader = FALSE;
+		headerOffset.QuadPart = TC_VOLUME_HEADER_OFFSET; // offset for main header
+	}
+
+	/* header successfully updated */
+	nStatus = ERR_SUCCESS;
+
+	if (bVolTransformThreadCancel)
+	{
+		SLOG_ERROR("bVolTransformThreadCancel is TRUE");
+		nStatus = ERR_USER_ABORT;
+		goto error;
+	}
+
+	/* wipe old backup header */
+	if ( !cryptoInfo->LegacyVolume )
+	{
+		byte wipeRandChars [TC_WIPE_RAND_CHAR_COUNT];
+		byte wipeRandCharsUpdate [TC_WIPE_RAND_CHAR_COUNT];
+		byte wipePass;
+		UINT64_STRUCT unitNo;
+		LARGE_INTEGER offset;
+		WipeAlgorithmId wipeAlgorithm = TC_WIPE_35_GUTMANN;
+
+		if (	!RandgetBytes (NULL, wipeRandChars, TC_WIPE_RAND_CHAR_COUNT, TRUE)
+			|| !RandgetBytes (NULL, wipeRandCharsUpdate, TC_WIPE_RAND_CHAR_COUNT, TRUE)
+			)
+		{
+			nStatus = ERR_OS_ERROR;
+			goto error;
+		}
+
+		SLOG_INFO("Wiping old backup header ...");
+
+		wipeBuffer = (byte *) TCalloc (workChunkSize);
+		if (!wipeBuffer)
+		{
+			nStatus = ERR_OUTOFMEMORY;
+			goto error;
+		}
+
+		offset.QuadPart = currentVolSize - TC_VOLUME_HEADER_GROUP_SIZE;
+		unitNo.Value = offset.QuadPart;
+
+		for (wipePass = 1; wipePass <= GetWipePassCount (wipeAlgorithm); ++wipePass)
+		{
+			if (!WipeBuffer (wipeAlgorithm, wipeRandChars, wipePass, wipeBuffer, workChunkSize))
+			{
+				ULONG i;
+				for (i = 0; i < workChunkSize; ++i)
+				{
+					wipeBuffer[i] = wipePass;
+				}
+
+				EncryptDataUnits (wipeBuffer, &unitNo, workChunkSize / ENCRYPTION_DATA_UNIT_SIZE, cryptoInfo);
+				memcpy (wipeRandCharsUpdate, wipeBuffer, sizeof (wipeRandCharsUpdate));
+			}
+
+			if ( !SetFilePointerEx (dev, offset, NULL, FILE_BEGIN)
+				|| _lwrite ((HFILE)dev, (LPCSTR)wipeBuffer, workChunkSize) == HFILE_ERROR
+				)
+			{
+				// Write error
+				SLOG_ERROR("Warning: Failed to wipe old backup header");
+				// MessageBoxW (hwndDlg, L"WARNING: Failed to wipe old backup header!\n\nIt may be possible to use the current volume password to decrypt the old backup header even after a future password change.\n", lpszTitle, MB_OK | MB_ICONEXCLAMATION);
+				if (wipePass == 1)
+					continue; // retry once
+				// non-critical error - it's better to continue
+				nStatus = ERR_SUCCESS;
+				goto error;
+			}
+			FlushFileBuffers(dev);
+			// we don't check FlushFileBuffers() return code, because it fails for devices
+			// (same implementation in password.c - a bug or not ???)
+		}
+
+		burn (wipeRandChars, TC_WIPE_RAND_CHAR_COUNT);
+		burn (wipeRandCharsUpdate, TC_WIPE_RAND_CHAR_COUNT);
+	}
+
+error:
+	dwError = GetLastError ();
+
+	if (wipeBuffer)
+	{
+		burn (wipeBuffer, workChunkSize);
+		TCfree (wipeBuffer);
+		wipeBuffer = NULL;
+	}
+
+	burn (buffer, sizeof (buffer));
+
+	if (cryptoInfo != NULL)
+		crypto_close (cryptoInfo);
+
+	if (bTimeStampValid)
+	{
+		// Restore the container timestamp (to preserve plausible deniability of possible hidden volume).
+		if (SetFileTime (dev, &ftCreationTime, &ftLastAccessTime, &ftLastWriteTime) == 0) {
+			SLOG_INFO("SETFILETIME_FAILED_PW");
+			// MessageBoxW (hwndDlg, GetString ("SETFILETIME_FAILED_PW"), lpszTitle, MB_OK | MB_ICONEXCLAMATION);
+		}
+	}                      
+
+	if (dev != INVALID_HANDLE_VALUE)
+		CloseHandle ((HANDLE) dev);
+
+	if (nDosLinkCreated == 0)
+		RemoveFakeDosName (szDiskFile, szDosDevice);
+
+	RandStop (FALSE);
+
+	if (bVolTransformThreadCancel)
+		nStatus = ERR_USER_ABORT;
+
+	SetLastError (dwError);
+
+	if (nStatus == ERR_SUCCESS)
+	{
+		// Yww-
+		// nStatus = ExtendFileSystem (hwndDlg, lpszVolume, pVolumePassword, VolumePkcs5, VolumePim, newDataAreaSize);
+		nStatus = ExtendFileSystem (NULL, lpszVolume, pVolumePassword, VolumePkcs5, VolumePim, newDataAreaSize);
+		SLOG_INFO("ExtendFileSystem result = %d, lpszVolume = %ls", nStatus, lpszVolume);
+	} else {
+		SLOG_ERROR("DataCubeExpandVolume return nStatus = %d", nStatus);
+	}
+
+	return nStatus;
+}
+

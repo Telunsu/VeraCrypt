@@ -346,7 +346,7 @@ int ChangePwd (const wchar_t *lpszVolume, Password *oldPassword, int old_pkcs5, 
 		}
 
 		/* Read in volume header */
-		if (!ReadEffectiveVolumeHeader (bDevice, dev, buffer, &bytesRead))
+		if (!ReadEffectiveVolumeHeader (bDevice, dev, (byte*)buffer, &bytesRead))
 		{
 			nStatus = ERR_OS_ERROR;
 			goto error;
@@ -427,7 +427,7 @@ int ChangePwd (const wchar_t *lpszVolume, Password *oldPassword, int old_pkcs5, 
 				newPassword,
 				cryptoInfo->pkcs5,
 				pim,
-				cryptoInfo->master_keydata,
+				(char*)cryptoInfo->master_keydata,
 				&ci,
 				cryptoInfo->VolumeSize.Value,
 				(volumeType == TC_VOLUME_TYPE_HIDDEN) ? cryptoInfo->hiddenVolumeSize : 0,
@@ -450,7 +450,7 @@ int ChangePwd (const wchar_t *lpszVolume, Password *oldPassword, int old_pkcs5, 
 				goto error;
 			}
 
-			if (!WriteEffectiveVolumeHeader (bDevice, dev, buffer))
+			if (!WriteEffectiveVolumeHeader (bDevice, dev, (byte*)buffer))
 			{
 				nStatus = ERR_OS_ERROR;
 				goto error;
@@ -503,7 +503,7 @@ int ChangePwd (const wchar_t *lpszVolume, Password *oldPassword, int old_pkcs5, 
 					goto error;
 				}
 
-				if (!WriteEffectiveVolumeHeader (bDevice, dev, buffer))
+				if (!WriteEffectiveVolumeHeader (bDevice, dev, (byte*)buffer))
 				{
 					nStatus = ERR_OS_ERROR;
 					goto error;

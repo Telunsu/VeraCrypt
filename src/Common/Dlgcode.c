@@ -3244,6 +3244,296 @@ void InitApp (HINSTANCE hInstance, wchar_t *lpszCommandLine)
 #endif
 }
 
+
+/* InitAppWithoutHInstance - initialize the application */
+void InitAppWithoutHInstance (wchar_t *lpszCommandLine)
+{
+	WNDCLASSW wc;
+	char langId[6];	
+	InitCommonControlsPtr InitCommonControlsFn = NULL;	
+	wchar_t modPath[MAX_PATH];
+
+	GetModuleFileNameW (NULL, modPath, ARRAYSIZE (modPath));
+
+   /* remove current directory from dll search path */
+   SetDllDirectoryFn = (SetDllDirectoryPtr) GetProcAddress (GetModuleHandle(L"kernel32.dll"), "SetDllDirectoryW");
+   SetSearchPathModeFn = (SetSearchPathModePtr) GetProcAddress (GetModuleHandle(L"kernel32.dll"), "SetSearchPathMode");
+   SetDefaultDllDirectoriesFn = (SetDefaultDllDirectoriesPtr) GetProcAddress (GetModuleHandle(L"kernel32.dll"), "SetDefaultDllDirectories");
+
+   if (SetDllDirectoryFn)
+      SetDllDirectoryFn (L"");
+   if (SetSearchPathModeFn)
+      SetSearchPathModeFn (BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE | BASE_SEARCH_PATH_PERMANENT);
+   if (SetDefaultDllDirectoriesFn)
+      SetDefaultDllDirectoriesFn (LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+   InitOSVersionInfo();
+
+	VirtualLock (&CmdTokenPin, sizeof (CmdTokenPin));
+
+	InitGlobalLocks ();
+
+	LoadSystemDll (L"msvcrt.dll", &hmsvcrtdll, TRUE, SRC_POS);
+	LoadSystemDll (L"ntmarta.dll", &hntmartadll, TRUE, SRC_POS);
+	LoadSystemDll (L"MPR.DLL", &hmprdll, TRUE, SRC_POS);
+#ifdef SETUP
+	if (IsOSAtLeast (WIN_7))
+	{
+		LoadSystemDll (L"ProfApi.DLL", &hProfApiDll, TRUE, SRC_POS);
+		LoadSystemDll (L"cryptbase.dll", &hcryptbasedll, TRUE, SRC_POS);
+		LoadSystemDll (L"sspicli.dll", &hsspiclidll, TRUE, SRC_POS);
+	}
+#endif
+	LoadSystemDll (L"psapi.dll", &hpsapidll, TRUE, SRC_POS);
+	LoadSystemDll (L"secur32.dll", &hsecur32dll, TRUE, SRC_POS);
+	LoadSystemDll (L"msasn1.dll", &hmsasn1dll, TRUE, SRC_POS);
+	LoadSystemDll (L"Usp10.DLL", &hUsp10Dll, TRUE, SRC_POS);
+	if (IsOSAtLeast (WIN_7))
+		LoadSystemDll (L"dwmapi.dll", &hdwmapidll, TRUE, SRC_POS);
+	LoadSystemDll (L"UXTheme.dll", &hUXThemeDll, TRUE, SRC_POS);   
+
+	LoadSystemDll (L"msls31.dll", &hMsls31, TRUE, SRC_POS);	
+	LoadSystemDll (L"SETUPAPI.DLL", &hSetupDll, FALSE, SRC_POS);
+	LoadSystemDll (L"SHLWAPI.DLL", &hShlwapiDll, FALSE, SRC_POS);	
+
+	LoadSystemDll (L"userenv.dll", &hUserenvDll, TRUE, SRC_POS);
+	LoadSystemDll (L"rsaenh.dll", &hRsaenhDll, TRUE, SRC_POS);
+
+#ifdef SETUP
+	if (nCurrentOS < WIN_7)
+	{
+		if (nCurrentOS == WIN_XP)
+		{
+			LoadSystemDll (L"imm32.dll", &himm32dll, TRUE, SRC_POS);
+			LoadSystemDll (L"MSCTF.dll", &hMSCTFdll, TRUE, SRC_POS);
+			LoadSystemDll (L"fltlib.dll", &hfltlibdll, TRUE, SRC_POS);
+			LoadSystemDll (L"wbem\\framedyn.dll", &hframedyndll, TRUE, SRC_POS);
+		}
+
+		if (IsOSAtLeast (WIN_VISTA))
+		{					
+			LoadSystemDll (L"netapi32.dll", &hnetapi32dll, TRUE, SRC_POS);
+			LoadSystemDll (L"authz.dll", &hauthzdll, TRUE, SRC_POS);
+			LoadSystemDll (L"xmllite.dll", &hxmllitedll, TRUE, SRC_POS);
+		}
+	}
+
+	if (IsOSAtLeast (WIN_VISTA))
+	{					
+		LoadSystemDll (L"atl.dll", &hsppdll, TRUE, SRC_POS);
+		LoadSystemDll (L"vsstrace.dll", &hvsstracedll, TRUE, SRC_POS);
+		LoadSystemDll (L"vssapi.dll", &vssapidll, TRUE, SRC_POS);
+		LoadSystemDll (L"spp.dll", &hsppdll, TRUE, SRC_POS);
+	}
+#endif
+
+	LoadSystemDll (L"crypt32.dll", &hcrypt32dll, TRUE, SRC_POS);
+	
+	if (IsOSAtLeast (WIN_7))
+	{
+		LoadSystemDll (L"CryptSP.dll", &hCryptSpDll, TRUE, SRC_POS);
+
+		LoadSystemDll (L"cfgmgr32.dll", &hcfgmgr32dll, TRUE, SRC_POS);
+		LoadSystemDll (L"devobj.dll", &hdevobjdll, TRUE, SRC_POS);
+		LoadSystemDll (L"powrprof.dll", &hpowrprofdll, TRUE, SRC_POS);
+
+		LoadSystemDll (L"bcrypt.dll", &hbcryptdll, TRUE, SRC_POS);
+		LoadSystemDll (L"bcryptprimitives.dll", &hbcryptprimitivesdll, TRUE, SRC_POS);								
+	}	
+
+#ifndef SETUP
+	LoadSystemDll (L"WINSCARD.DLL", &hwinscarddll, TRUE, SRC_POS);
+#endif
+
+	LoadSystemDll (L"COMCTL32.DLL", &hComctl32Dll, FALSE, SRC_POS);
+	
+	// call InitCommonControls function
+	InitCommonControlsFn = (InitCommonControlsPtr) GetProcAddress (hComctl32Dll, "InitCommonControls");
+	ImageList_AddFn = (ImageList_AddPtr) GetProcAddress (hComctl32Dll, "ImageList_Add");
+	ImageList_CreateFn = (ImageList_CreatePtr) GetProcAddress (hComctl32Dll, "ImageList_Create");
+
+	if (InitCommonControlsFn && ImageList_AddFn && ImageList_CreateFn)
+	{
+		InitCommonControlsFn();
+	}
+	else
+		AbortProcess ("INIT_DLL");
+
+	LoadSystemDll (L"Riched20.dll", &hRichEditDll, FALSE, SRC_POS);
+
+#if !defined(SETUP)
+	if (!VerifyModuleSignature (modPath))
+		AbortProcess ("DIST_PACKAGE_CORRUPTED");
+#endif
+	// Get SetupAPI functions pointers
+	SetupCloseInfFileFn = (SetupCloseInfFilePtr) GetProcAddress (hSetupDll, "SetupCloseInfFile");
+	SetupDiOpenClassRegKeyFn = (SetupDiOpenClassRegKeyPtr) GetProcAddress (hSetupDll, "SetupDiOpenClassRegKey");
+	SetupInstallFromInfSectionWFn = (SetupInstallFromInfSectionWPtr) GetProcAddress (hSetupDll, "SetupInstallFromInfSectionW");
+	SetupOpenInfFileWFn = (SetupOpenInfFileWPtr) GetProcAddress (hSetupDll, "SetupOpenInfFileW");
+
+	if (!SetupCloseInfFileFn || !SetupDiOpenClassRegKeyFn || !SetupInstallFromInfSectionWFn || !SetupOpenInfFileWFn)
+		AbortProcess ("INIT_DLL");
+
+	// Get SHDeleteKeyW function pointer
+	SHDeleteKeyWFn = (SHDeleteKeyWPtr) GetProcAddress (hShlwapiDll, "SHDeleteKeyW");
+	SHStrDupWFn = (SHStrDupWPtr) GetProcAddress (hShlwapiDll, "SHStrDupW");
+	if (!SHDeleteKeyWFn || !SHStrDupWFn)
+		AbortProcess ("INIT_DLL");
+
+	if (IsOSAtLeast (WIN_VISTA))
+	{
+		/* Get ChangeWindowMessageFilter used to enable some messages bypasss UIPI (User Interface Privilege Isolation) */
+		ChangeWindowMessageFilterFn = (ChangeWindowMessageFilterPtr) GetProcAddress (GetModuleHandle (L"user32.dll"), "ChangeWindowMessageFilter");
+
+#ifndef SETUP
+		/* enable drag-n-drop when we are running elevated */
+		AllowMessageInUIPI (WM_DROPFILES);
+		AllowMessageInUIPI (WM_COPYDATA);
+		AllowMessageInUIPI (WM_COPYGLOBALDATA);
+#endif
+	}
+
+	/* Save the instance handle for later */
+	// hInst = hInstance;
+
+	SetErrorMode (SetErrorMode (0) | SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
+	CoInitialize (NULL);
+
+#ifndef SETUP
+	// Application ID
+	typedef HRESULT (WINAPI *SetAppId_t) (PCWSTR appID);
+	SetAppId_t setAppId = (SetAppId_t) GetProcAddress (GetModuleHandle (L"shell32.dll"), "SetCurrentProcessExplicitAppUserModelID");
+
+	if (setAppId)
+		setAppId (TC_APPLICATION_ID);
+#endif
+
+	// Language
+	langId[0] = 0;
+	SetPreferredLangId (ConfigReadString ("Language", "", langId, sizeof (langId)));
+
+#ifndef SETUP
+	if (langId[0] == 0)
+	{
+		// check if user selected a language during installation
+		WCHAR uiLang[6];
+		ReadRegistryString (L"Software\\VeraCrypt", L"SetupUILanguage", L"", uiLang, sizeof (uiLang));
+		if (0 < WideCharToMultiByte (CP_ACP, 0, uiLang, -1, langId, sizeof (langId), NULL, NULL))
+		{
+			SetPreferredLangId (langId);
+			bLanguageSetInSetup = TRUE;
+		}
+	}
+
+#ifndef VCEXPANDER
+	// delete the registry key created by the installer (if any)
+	DeleteRegistryKey (HKEY_CURRENT_USER, L"Software\\VeraCrypt");
+#endif
+
+#endif
+	
+	if (langId[0] == 0)
+	{
+		if (IsNonInstallMode ())
+		{
+			// only support automatic use of a language file in portable mode
+			// this is achieved by placing a unique language XML file in the same
+			// place as portable VeraCrypt binaries.
+			// DialogBoxParamW (hInst, MAKEINTRESOURCEW (IDD_LANGUAGE), NULL,
+			// 	(DLGPROC) LanguageDlgProc, (LPARAM) 1);
+			SLOG_TRACE("IsNonInstallMode return TRUE");
+		}
+		else
+		{
+			// when installed, force using English as default language
+			SetPreferredLangId ("en");
+		}
+	}
+
+	LoadLanguageFile ();
+
+	SetUnhandledExceptionFilter (ExceptionHandler);
+	_set_invalid_parameter_handler (InvalidParameterHandler);
+
+	RemoteSession = GetSystemMetrics (SM_REMOTESESSION) != 0;
+
+	wc.lpszClassName = TC_DLG_CLASS;
+	wc.lpfnWndProc = &CustomDlgProc;
+	wc.hCursor = LoadCursor (NULL, IDC_ARROW);
+	wc.cbWndExtra = DLGWINDOWEXTRA;
+
+	hDlgClass = RegisterClassW (&wc);
+	if (hDlgClass == 0)
+	{
+		handleWin32Error (NULL, SRC_POS);
+		AbortProcess ("INIT_REGISTER");
+	}
+
+	wc.lpszClassName = TC_SPLASH_CLASS;
+	wc.lpfnWndProc = &SplashDlgProc;
+	wc.hCursor = LoadCursor (NULL, IDC_ARROW);
+	wc.cbWndExtra = DLGWINDOWEXTRA;
+
+	hSplashClass = RegisterClassW (&wc);
+	if (hSplashClass == 0)
+	{
+		handleWin32Error (NULL, SRC_POS);
+		AbortProcess ("INIT_REGISTER");
+	}
+
+	// DPI and GUI aspect ratio
+	// DialogBoxParamW (hInst, MAKEINTRESOURCEW (IDD_AUXILIARY_DLG), NULL,
+	//	(DLGPROC) AuxiliaryDlgProc, (LPARAM) 1);
+
+	InitHelpFileName ();
+
+#ifndef SETUP
+	if (!EncryptionThreadPoolStart (ReadEncryptionThreadPoolFreeCpuCountLimit()))
+	{
+		handleWin32Error (NULL, SRC_POS);
+		FREE_DLL (hRichEditDll);
+		FREE_DLL (hComctl32Dll);
+		FREE_DLL (hSetupDll);
+		FREE_DLL (hShlwapiDll);
+		FREE_DLL (hProfApiDll);
+		FREE_DLL (hUsp10Dll);
+		FREE_DLL (hCryptSpDll);
+		FREE_DLL (hUXThemeDll);
+		FREE_DLL (hUserenvDll);
+		FREE_DLL (hRsaenhDll);
+		FREE_DLL (himm32dll);
+		FREE_DLL (hMSCTFdll);
+		FREE_DLL (hfltlibdll);
+		FREE_DLL (hframedyndll);
+		FREE_DLL (hpsapidll);
+		FREE_DLL (hsecur32dll);
+		FREE_DLL (hnetapi32dll);
+		FREE_DLL (hauthzdll);
+		FREE_DLL (hxmllitedll);
+		FREE_DLL (hmprdll);
+		FREE_DLL (hsppdll);
+		FREE_DLL (vssapidll);
+		FREE_DLL (hvsstracedll);
+		FREE_DLL (hCryptSpDll);
+		FREE_DLL (hcfgmgr32dll);
+		FREE_DLL (hdevobjdll);
+		FREE_DLL (hpowrprofdll);
+		FREE_DLL (hsspiclidll);
+		FREE_DLL (hcryptbasedll);
+		FREE_DLL (hdwmapidll);
+		FREE_DLL (hmsasn1dll);
+		FREE_DLL (hcrypt32dll);
+		FREE_DLL (hbcryptdll);
+		FREE_DLL (hbcryptprimitivesdll);
+		FREE_DLL (hMsls31);
+		FREE_DLL (hntmartadll);
+		FREE_DLL (hwinscarddll);
+		FREE_DLL (hmsvcrtdll);
+		exit (1);
+	}
+#endif
+}
+
 void FinalizeApp (void)
 {
 	FREE_DLL (hRichEditDll);
@@ -4571,18 +4861,19 @@ load:
 
 			return ERR_OS_ERROR;
 		}
-		else if (DriverVersion != VERSION_NUM)
-		{
-			// Unload an incompatbile version of the driver loaded in non-install mode and load the required version
-			if (IsNonInstallMode () && CreateDriverSetupMutex () && DriverUnload () && nLoadRetryCount++ < 3) {
-				goto load;
-			}
-
-			CloseDriverSetupMutex ();
-			CloseHandle (hDriver);
-			hDriver = INVALID_HANDLE_VALUE;
-			return ERR_DRIVER_VERSION;
-		}
+// Yww-
+//		else if (DriverVersion != VERSION_NUM)
+//		{
+//			// Unload an incompatbile version of the driver loaded in non-install mode and load the required version
+//			if (IsNonInstallMode () && CreateDriverSetupMutex () && DriverUnload () && nLoadRetryCount++ < 3) {
+//				goto load;
+//			}
+//
+//			CloseDriverSetupMutex ();
+//			CloseHandle (hDriver);
+//			hDriver = INVALID_HANDLE_VALUE;
+//			return ERR_DRIVER_VERSION;
+//		}
 #else
 		if (!bResult)
 			DriverVersion = 0;
@@ -7551,7 +7842,8 @@ int DriverUnmountVolume (HWND hwndDlg, int nDosDriveNo, BOOL forced)
 
 	if (bResult == FALSE)
 	{
-		handleWin32Error (hwndDlg, SRC_POS);
+		SLOG_ERROR("DeviceControl return FALSE");
+		// handleWin32Error (hwndDlg, SRC_POS);
 		return 1;
 	}
 	else if ((unmount.nReturnCode == ERR_SUCCESS) && bDriverSetLabel && wszLabel[0])
@@ -8070,7 +8362,6 @@ int MountVolume (HWND hwndDlg,
 	if (password == NULL && IsPasswordCacheEmpty ())
 		return 0;
 
-	SLOG_TRACE("[MountVolume] ========================1============");
 	ZeroMemory (&mount, sizeof (mount));
 	mount.bExclusiveAccess = sharedAccess ? FALSE : TRUE;
 	mount.SystemFavorite = MountVolumesAsSystemFavorite;
@@ -8110,7 +8401,6 @@ retry:
 	mount.bTrueCryptMode = truecryptMode;
 	mount.VolumePim = pim;
 
-	SLOG_TRACE("[MountVolume] ========================2=============");
 	// Windows 2000 mount manager causes problems with remounted volumes
 	if (CurrentOSMajor == 5 && CurrentOSMinor == 0)
 		mount.bMountManager = FALSE;
@@ -8146,9 +8436,9 @@ retry:
 		else
 		{
 			SLOG_TRACE("[MountVolume] VOLUME_ID_INVALID, volumePaht = %ls", volumePath);
-
-			if (!quiet)
-				Error ("VOLUME_ID_INVALID", hwndDlg);
+			// Yww-
+			// if (!quiet)
+			// 	Error ("VOLUME_ID_INVALID", hwndDlg);
 
 			SetLastError (ERROR_INVALID_PARAMETER);
 			return -1;
@@ -8157,7 +8447,6 @@ retry:
 	else
 		CreateFullVolumePath (mount.wszVolume, sizeof(mount.wszVolume), volumePath, &bDevice);
 
-	SLOG_TRACE("[MountVolume] ========================3=============");
 	if (!bDevice)
 	{
 		SLOG_TRACE("[MountVolume] bDevice is false, volumePaht = %ls", volumePath);
@@ -8234,7 +8523,6 @@ retry:
 		}
 	}
 
-	SLOG_TRACE("[MountVolume] ========================4=============");
 	if (mountOptions->PartitionInInactiveSysEncScope)
 	{
 		if (mount.wszVolume == NULL || swscanf_s ((const wchar_t *) mount.wszVolume,
@@ -8243,9 +8531,9 @@ retry:
 			sizeof(mount.nPartitionInInactiveSysEncScopeDriveNo)) != 1)
 		{
 			SLOG_TRACE("[MountVolume] NO_SYSENC_PARTITION_SELECTED, volumePaht = %ls", volumePath);
-
-			if (!quiet)
-				Warning ("NO_SYSENC_PARTITION_SELECTED", hwndDlg);
+			// yww-
+			// if (!quiet)
+			// 	Warning ("NO_SYSENC_PARTITION_SELECTED", hwndDlg);
 			return -1;
 		}
 
@@ -8354,11 +8642,12 @@ retry:
 				}
 
 				// Ask user 
-				if (IDYES == AskWarnNoYes ("FILE_IN_USE", hwndDlg))
-				{
-					mount.bExclusiveAccess = FALSE;
-					goto retry;
-				}
+				// Yww-: always return IDNO
+				// if (IDYES == AskWarnNoYes ("FILE_IN_USE", hwndDlg))
+				// {
+				// 	mount.bExclusiveAccess = FALSE;
+				// 	goto retry;
+				// }
 			}
 
 			return -1;
@@ -8435,8 +8724,10 @@ retry:
 	if (mount.UseBackupHeader != mountOptions->UseBackupHeader
 		&& mount.UseBackupHeader)
 	{
-		if (bReportWrongPassword && !Silent)
-			Warning ("HEADER_DAMAGED_AUTO_USED_HEADER_BAK", hwndDlg);
+		SLOG_WARN("HEADER_DAMAGED_AUTO_USED_HEADER_BAK");
+		// yww-
+		// if (bReportWrongPassword && !Silent)
+		// 	Warning ("HEADER_DAMAGED_AUTO_USED_HEADER_BAK", hwndDlg);
 	}
 	
 	LastMountedVolumeDirty = mount.FilesystemDirty;
@@ -8447,8 +8738,9 @@ retry:
 		wchar_t mountPoint[] = { L'A' + (wchar_t) driveNo, L':', 0 };
 		StringCbPrintfW (msg, sizeof(msg), GetString ("MOUNTED_VOLUME_DIRTY"), mountPoint);
 
-		if (AskWarnYesNoStringTopmost (msg, hwndDlg) == IDYES)
-			CheckFilesystem (hwndDlg, driveNo, TRUE);
+		// Yww-: return IDNO
+		// if (AskWarnYesNoStringTopmost (msg, hwndDlg) == IDYES)
+		// 	CheckFilesystem (hwndDlg, driveNo, TRUE);
 	}
 
 	if (mount.VolumeMountedReadOnlyAfterAccessDenied
@@ -8461,7 +8753,7 @@ retry:
 		wchar_t mountPoint[] = { L'A' + (wchar_t) driveNo, L':', 0 };
 		StringCbPrintfW (msg, sizeof(msg), GetString ("MOUNTED_CONTAINER_FORCED_READ_ONLY"), mountPoint);
 
-		WarningDirect (msg, hwndDlg);
+		// WarningDirect (msg, hwndDlg);
 	}
 
 	if (mount.VolumeMountedReadOnlyAfterAccessDenied
@@ -8472,7 +8764,7 @@ retry:
 		wchar_t mountPoint[] = { L'A' + (wchar_t) driveNo, L':', 0 };
 		StringCbPrintfW (msg, sizeof(msg), GetString ("MOUNTED_DEVICE_FORCED_READ_ONLY"), mountPoint);
 
-		WarningDirect (msg, hwndDlg);
+		// WarningDirect (msg, hwndDlg);
 	}
 
 	if (mount.VolumeMountedReadOnlyAfterDeviceWriteProtected
@@ -8483,7 +8775,7 @@ retry:
 		wchar_t mountPoint[] = { L'A' + (wchar_t) driveNo, L':', 0 };
 		StringCbPrintfW (msg, sizeof(msg), GetString ("MOUNTED_DEVICE_FORCED_READ_ONLY_WRITE_PROTECTION"), mountPoint);
 
-		WarningDirect (msg, hwndDlg);
+		// WarningDirect (msg, hwndDlg);
 
 		if (CurrentOSMajor >= 6
 			&& wcsstr (volumePath, L"\\Device\\HarddiskVolume") != volumePath
@@ -8504,7 +8796,7 @@ retry:
 	BroadcastDeviceChange (DBT_DEVICEARRIVAL, driveNo, 0);
 
 	if (mount.bExclusiveAccess == FALSE) {
-		SLOG_TRACE("[MountVolume] return 1");
+		SLOG_TRACE("[MountVolume] return 2");
 		return 2;
 	}
 
@@ -8577,11 +8869,12 @@ retry:
 	{
 		if (result == ERR_FILES_OPEN && !Silent)
 		{
-			if (IDYES == AskWarnYesNoTopmost ("UNMOUNT_LOCK_FAILED", hwndDlg))
-			{
-				forced = TRUE;
-				goto retry;
-			}
+			// Always return No
+			// if (IDYES == AskWarnYesNoTopmost ("UNMOUNT_LOCK_FAILED", hwndDlg))
+			// {
+			// 	forced = TRUE;
+			// 	goto retry;
+			// }
 
 			if (IsOSAtLeast (WIN_7))
 			{
@@ -8593,7 +8886,7 @@ retry:
 			return FALSE;
 		}
 
-		Error ("UNMOUNT_FAILED", hwndDlg);
+		SLOG_ERROR("UNMOUNT_FAILED, driverNo = %d", nDosDriveNo);
 
 		return FALSE;
 	}
@@ -10710,7 +11003,9 @@ void DebugMsgBox (char *format, ...)
 
 BOOL IsOSAtLeast (OSVersionEnum reqMinOS)
 {
-	return IsOSVersionAtLeast (reqMinOS, 0);
+	return TRUE;
+	// yww-: ignore version check
+	// return IsOSVersionAtLeast (reqMinOS, 0);
 }
 
 

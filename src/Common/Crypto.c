@@ -187,22 +187,22 @@ void EncipherBlock(int cipher, void *data, void *ks)
 		// In 32-bit kernel mode, due to KeSaveFloatingPointState() overhead, AES instructions can be used only when processing the whole data unit.
 #if (defined (_WIN64) || !defined (TC_WINDOWS_DRIVER)) && !defined (TC_WINDOWS_BOOT)
 		if (IsAesHwCpuSupported())
-			aes_hw_cpu_encrypt (ks, data);
+			aes_hw_cpu_encrypt ((const byte*)ks, (byte*)data);
 		else
 #endif
-			aes_encrypt (data, data, ks);
+			aes_encrypt ((const unsigned char*)data, (unsigned char*)data, (const aes_encrypt_ctx*)ks);
 		break;
 
-	case TWOFISH:		twofish_encrypt (ks, data, data); break;
-	case SERPENT:		serpent_encrypt (data, data, ks); break;
+	case TWOFISH:		twofish_encrypt ((TwofishInstance*)ks, (const unsigned int*)data, (unsigned int*)data); break;
+	case SERPENT:		serpent_encrypt ((const unsigned char*)data, (unsigned char*)data, (unsigned char*)ks); break;
 #if !defined (TC_WINDOWS_BOOT) || defined (TC_WINDOWS_BOOT_CAMELLIA)
-	case CAMELLIA:		camellia_encrypt (data, data, ks); break;
+	case CAMELLIA:		camellia_encrypt ((const unsigned char*)data, (unsigned char*)data, (unsigned char*)ks); break;
 #endif
 #if !defined(TC_WINDOWS_BOOT)
 #if defined(CIPHER_GOST89)
-	case GOST89:		gost_encrypt(data, data, ks, 1); break;
+	case GOST89:		gost_encrypt((const byte*)data, (byte*)data, (gost_kds*)ks, 1); break;
 #endif // defined(CIPHER_GOST89)
-	case KUZNYECHIK:		kuznyechik_encrypt_block(data, data, ks); break;
+	case KUZNYECHIK:		kuznyechik_encrypt_block((byte*)data, (const byte*)data, (kuznyechik_kds*)ks); break;
 #endif // !defined(TC_WINDOWS_BOOT) 
 	default:			TC_THROW_FATAL_EXCEPTION;	// Unknown/wrong ID
 	}
@@ -212,7 +212,7 @@ void EncipherBlock(int cipher, void *data, void *ks)
 
 void EncipherBlocks (int cipher, void *dataPtr, void *ks, size_t blockCount)
 {
-	byte *data = dataPtr;
+	byte *data = (byte*)dataPtr;
 #if defined (TC_WINDOWS_DRIVER) && !defined (_WIN64)
 	KFLOATING_SAVE floatingPointState;
 #endif
@@ -227,7 +227,7 @@ void EncipherBlocks (int cipher, void *dataPtr, void *ks, size_t blockCount)
 	{
 		while (blockCount > 0)
 		{
-			aes_hw_cpu_encrypt_32_blocks (ks, data);
+			aes_hw_cpu_encrypt_32_blocks ((const byte*)ks, data);
 
 			data += 32 * 16;
 			blockCount -= 32;
@@ -246,7 +246,7 @@ void EncipherBlocks (int cipher, void *dataPtr, void *ks, size_t blockCount)
 #endif
 		)
 	{
-		serpent_encrypt_blocks (data, data, blockCount, ks);
+		serpent_encrypt_blocks (data, data, blockCount, (unsigned char*)ks);
 #if defined (TC_WINDOWS_DRIVER) && !defined (_WIN64)
 		KeRestoreFloatingPointState (&floatingPointState);
 #endif
@@ -254,10 +254,10 @@ void EncipherBlocks (int cipher, void *dataPtr, void *ks, size_t blockCount)
 #endif
 #if CRYPTOPP_BOOL_X64
    else if (cipher == TWOFISH)	{
-			twofish_encrypt_blocks(ks, data, data, (uint32) blockCount);
+			twofish_encrypt_blocks((TwofishInstance*)ks, data, data, (uint32) blockCount);
 	}
 	else if (cipher == CAMELLIA)	{
-			camellia_encrypt_blocks(ks, data, data, (uint32) blockCount);
+			camellia_encrypt_blocks((unsigned char*)ks, data, data, (uint32) blockCount);
 	}
 #endif
 #if CRYPTOPP_BOOL_SSE2_INTRINSICS_AVAILABLE && !defined (_UEFI)
@@ -268,14 +268,14 @@ void EncipherBlocks (int cipher, void *dataPtr, void *ks, size_t blockCount)
 #endif
 		)
 	{
-		kuznyechik_encrypt_blocks (data, data, blockCount, ks);
+		kuznyechik_encrypt_blocks (data, data, blockCount, (kuznyechik_kds*)ks);
 #if defined (TC_WINDOWS_DRIVER) && !defined (_WIN64)
 		KeRestoreFloatingPointState (&floatingPointState);
 #endif
 	}
 #endif
 	else if (cipher == GOST89)	{
-			gost_encrypt(data, data, ks, (int)blockCount);
+			gost_encrypt(data, data, (gost_kds*)ks, (int)blockCount);
 	}
 	else
 	{
@@ -294,16 +294,16 @@ void DecipherBlock(int cipher, void *data, void *ks)
 {
 	switch (cipher)
 	{
-	case SERPENT:	serpent_decrypt (data, data, ks); break;
-	case TWOFISH:	twofish_decrypt (ks, data, data); break;
+	case SERPENT:	serpent_decrypt ((const unsigned char*)data, (unsigned char*)data, (unsigned char*)ks); break;
+	case TWOFISH:	twofish_decrypt ((TwofishInstance*)ks, (const unsigned int*)data, (unsigned int*)data); break;
 #if !defined (TC_WINDOWS_BOOT) || defined (TC_WINDOWS_BOOT_CAMELLIA)
-	case CAMELLIA:	camellia_decrypt (data, data, ks); break;
+	case CAMELLIA:	camellia_decrypt ((const unsigned char*)data, (unsigned char*)data, (unsigned char*)ks); break;
 #endif
 #if !defined(TC_WINDOWS_BOOT)
 #if defined(CIPHER_GOST89)
-	case GOST89:	gost_decrypt(data, data, ks, 1); break;
+	case GOST89:	gost_decrypt((const byte*)data, (byte*)data, (gost_kds*)ks, 1); break;
 #endif // defined(CIPHER_GOST89)
-	case KUZNYECHIK:	kuznyechik_decrypt_block(data, data, ks); break;
+	case KUZNYECHIK:	kuznyechik_decrypt_block((byte*)data, (const byte*)data, (kuznyechik_kds*)ks); break;
 #endif // !defined(TC_WINDOWS_BOOT)
 
 
@@ -312,10 +312,10 @@ void DecipherBlock(int cipher, void *data, void *ks)
 	case AES:
 #if defined (_WIN64) || !defined (TC_WINDOWS_DRIVER)
 		if (IsAesHwCpuSupported())
-			aes_hw_cpu_decrypt ((byte *) ks + sizeof (aes_encrypt_ctx), data);
+			aes_hw_cpu_decrypt ((byte *) ks + sizeof (aes_encrypt_ctx), (byte*)data);
 		else
 #endif
-			aes_decrypt (data, data, (void *) ((char *) ks + sizeof(aes_encrypt_ctx)));
+			aes_decrypt ((const unsigned char*)data, (unsigned char*)data, (const aes_decrypt_ctx *) ((char *) ks + sizeof(aes_encrypt_ctx)));
 		break;
 
 #else
@@ -329,7 +329,7 @@ void DecipherBlock(int cipher, void *data, void *ks)
 
 void DecipherBlocks (int cipher, void *dataPtr, void *ks, size_t blockCount)
 {
-	byte *data = dataPtr;
+	byte *data = (byte*)dataPtr;
 #if defined (TC_WINDOWS_DRIVER) && !defined (_WIN64)
 	KFLOATING_SAVE floatingPointState;
 #endif
@@ -363,7 +363,7 @@ void DecipherBlocks (int cipher, void *dataPtr, void *ks, size_t blockCount)
 #endif
 		)
 	{
-		serpent_decrypt_blocks (data, data, blockCount, ks);
+		serpent_decrypt_blocks (data, data, blockCount,(unsigned char*)ks);
 #if defined (TC_WINDOWS_DRIVER) && !defined (_WIN64)
 		KeRestoreFloatingPointState (&floatingPointState);
 #endif
@@ -371,10 +371,10 @@ void DecipherBlocks (int cipher, void *dataPtr, void *ks, size_t blockCount)
 #endif
 #if CRYPTOPP_BOOL_X64
    else if (cipher == TWOFISH)	{
-			twofish_decrypt_blocks(ks, data, data, (uint32) blockCount);
+			twofish_decrypt_blocks((TwofishInstance*)ks, data, data, (uint32) blockCount);
 	}
 	else if (cipher == CAMELLIA)	{
-			camellia_decrypt_blocks(ks, data, data, (uint32) blockCount);
+			camellia_decrypt_blocks((unsigned char*)ks, data, data, (uint32) blockCount);
 	}
 #endif
 #if CRYPTOPP_BOOL_SSE2_INTRINSICS_AVAILABLE && !defined (_UEFI)
@@ -385,14 +385,14 @@ void DecipherBlocks (int cipher, void *dataPtr, void *ks, size_t blockCount)
 #endif
 		)
 	{
-		kuznyechik_decrypt_blocks (data, data, blockCount, ks);
+		kuznyechik_decrypt_blocks (data, data, blockCount, (kuznyechik_kds*)ks);
 #if defined (TC_WINDOWS_DRIVER) && !defined (_WIN64)
 		KeRestoreFloatingPointState (&floatingPointState);
 #endif
 	}
 #endif
 	else if (cipher == GOST89)	{
-			gost_decrypt(data, data, ks, (int)blockCount);
+			gost_decrypt(data, data, (gost_kds*)ks, (int)blockCount);
 	}
 	else
 	{

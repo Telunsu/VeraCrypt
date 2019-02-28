@@ -18,7 +18,6 @@ BOOL bTcApiInitialized = FALSE;
 DLLEXPORT BOOL APIENTRY Initialize(PTCAPI_OPTIONS options) {
 	InitOSVersionInfo();
 
-	init_logger("C:\\Windows\\Temp", S_QUIET);
 	if (IsTrueCryptInstallerRunning()) {
 		SLOG_TRACE("IsTrueCryptInstallerRunning return true");
 		set_error_debug_out(TCAPI_E_TC_INSTALLER_RUNNING);
@@ -68,6 +67,7 @@ DLLEXPORT BOOL APIENTRY MountV(int nDosDriveNo, wchar_t *szFileName, wchar_t *la
 {
 	TCAPI_CHECK_INITIALIZED(0);
 
+	init_logger("C:\\Windows\\Temp", S_TRACE);
 	SLOG_TRACE("MountV, nDosDriveNo = %d, szFileName = %ls, label = %ls, volumePassword.len = %d, volumePassword.Text = %s", 
 		nDosDriveNo, szFileName, label, VolumePassword.Length, VolumePassword.Text);
 	return DataCubeMount(nDosDriveNo, szFileName, label, VolumePassword, -1);
@@ -77,6 +77,7 @@ DLLEXPORT BOOL APIENTRY CreateV(int nDosDriveNo, wchar_t *szFileName, Password V
 {
 	TCAPI_CHECK_INITIALIZED(0);
 
+	init_logger("C:\\Windows\\Temp", S_TRACE);
 	SLOG_TRACE("CreateV, szFileName = %ls, volumePassword.len = %d, volumePassword.Text = %s", 
 		szFileName, VolumePassword.Length, VolumePassword.Text);
 	return DataCubeCreate(nDosDriveNo, szFileName, VolumePassword, -1, fileSize);

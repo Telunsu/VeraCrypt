@@ -67,6 +67,8 @@ void __cdecl volTransformThreadFunction (void *hwndDlgArg);
 void AddProgressDlgStatus(HWND hwndDlg, const wchar_t* szText);
 void SetProgressDlgStatus(HWND hwndDlg, const wchar_t* szText);
 
+int DataCubeExpandVolume (wchar_t *lpszVolume, Password *pVolumePassword, int VolumePkcs5, int VolumePim, unsigned long long gb, BOOL initFreeSpace);
+
 #ifdef __cplusplus
 }
 #endif

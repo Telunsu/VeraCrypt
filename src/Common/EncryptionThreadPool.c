@@ -114,7 +114,7 @@ static TC_EVENT WorkItemCompletedEvent;
 
 static WorkItemState GetWorkItemState (EncryptionThreadPoolWorkItem *workItem)
 {
-	return InterlockedExchangeAdd ((LONG *) &workItem->State, 0);
+	return (WorkItemState)InterlockedExchangeAdd ((LONG *) &workItem->State, 0);
 }
 
 

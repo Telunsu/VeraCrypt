@@ -177,7 +177,7 @@ void RandStop (BOOL freePool)
 
 	if (hNetAPI32 != 0)
 	{
-		FreeLibrary (hNetAPI32);
+		FreeLibrary ((HMODULE)hNetAPI32);
 		hNetAPI32 = NULL;
 	}
 
@@ -709,11 +709,11 @@ BOOL SlowPoll (void)
 		if (hNetAPI32 != NULL)
 		{
 			/* Now get pointers to the functions */
-			pNetStatisticsGet = (NETSTATISTICSGET) GetProcAddress (hNetAPI32,
+			pNetStatisticsGet = (NETSTATISTICSGET) GetProcAddress ((HMODULE)hNetAPI32,
 							"NetStatisticsGet");
-			pNetApiBufferSize = (NETAPIBUFFERSIZE) GetProcAddress (hNetAPI32,
+			pNetApiBufferSize = (NETAPIBUFFERSIZE) GetProcAddress ((HMODULE)hNetAPI32,
 							"NetApiBufferSize");
-			pNetApiBufferFree = (NETAPIBUFFERFREE) GetProcAddress (hNetAPI32,
+			pNetApiBufferFree = (NETAPIBUFFERFREE) GetProcAddress ((HMODULE)hNetAPI32,
 							"NetApiBufferFree");
 
 			/* Make sure we got valid pointers for every NetAPI32
@@ -724,7 +724,7 @@ BOOL SlowPoll (void)
 			{
 				/* Free the library reference and reset the
 				   static handle */
-				FreeLibrary (hNetAPI32);
+				FreeLibrary ((HMODULE)hNetAPI32);
 				hNetAPI32 = NULL;
 			}
 		}

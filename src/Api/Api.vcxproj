@@ -188,7 +188,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <PreprocessorDefinitions>DCUBE_API;WIN32;NDEBUG;_WINDOWS;_USRDLL;TRUECRYPT_EXPORTS;_CRT_SECURE_NO_WARNINGS;VOLFORMAT;UNICODE;_UNICODE;VOLFORMAT;WIN32;HAVE_CONFIG_H;ZIP_STATIC;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_NON_CONFORMING_SWPRINTFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>

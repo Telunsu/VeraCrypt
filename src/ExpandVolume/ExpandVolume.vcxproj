@@ -35,7 +35,7 @@
     <PlatformToolset>Windows7.1SDK</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>Windows7.1SDK</PlatformToolset>
   </PropertyGroup>
@@ -78,14 +78,15 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Release\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</GenerateManifest>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Configuration)\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">VeraCryptExpander</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">VeraCryptExpander</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VeraCryptExpander</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VeraCryptExpander</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">DataCubeExpandVolumeApi64</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <CustomBuildStep>
@@ -171,6 +172,7 @@ copy Debug\VeraCryptExpander.exe "..\Debug\Setup Files" &gt;NUL:
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4311;4131;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
     <Link>
       <AdditionalDependencies>..\Crypto\x64\Debug\crypto.lib;..\Common\x64\Debug\Zip.lib;mpr.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -253,7 +255,7 @@ copy $(TargetPath) "..\Debug\Setup Files\VeraCryptExpander-x64.exe" &gt;NUL:
       <AdditionalOptions>/w34189 %(AdditionalOptions)</AdditionalOptions>
       <Optimization>MaxSpeed</Optimization>
       <AdditionalIncludeDirectories>..\Common;..\Crypto;..\;..\pkcs11;..\Common\zlib;..\Common\libzip;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>VCEXPANDER;TCMOUNT;WIN32;HAVE_CONFIG_H;ZIP_STATIC;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_NON_CONFORMING_SWPRINTFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DCUBE_API;NDEBUG;VCEXPANDER;TCMOUNT;WIN32;HAVE_CONFIG_H;ZIP_STATIC;NDEBUG;_WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_NON_CONFORMING_SWPRINTFS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <PrecompiledHeader>
@@ -263,10 +265,11 @@ copy $(TargetPath) "..\Debug\Setup Files\VeraCryptExpander-x64.exe" &gt;NUL:
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4311;4131;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
     <Link>
       <AdditionalDependencies>..\Crypto\x64\Release\crypto.lib;..\Common\x64\Release\Zip.lib;mpr.lib;DbgHelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)VeraCryptExpander.exe</OutputFile>
+      <OutputFile>$(OutDir)DataCubeExpandVolumeApi64.dll</OutputFile>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <DelayLoadDLLs>mpr.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -278,6 +281,7 @@ copy $(TargetPath) "..\Debug\Setup Files\VeraCryptExpander-x64.exe" &gt;NUL:
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <TargetMachine>MachineX64</TargetMachine>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <ModuleDefinitionFile>ExpandVolumeApi.def</ModuleDefinitionFile>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>VeraCryptExpander.manifest;%(AdditionalManifestFiles)</AdditionalManifestFiles>
@@ -316,6 +320,7 @@ copy $(TargetPath) "..\Debug\Setup Files\VeraCryptExpander-x64.exe" &gt;NUL:
     <ClCompile Include="..\Common\Log.c" />
     <ClCompile Include="..\Setup\SelfExtract.c" />
     <ClCompile Include="DlgExpandVolume.cpp" />
+    <ClCompile Include="ExpandVolumeApi.c" />
     <ClCompile Include="ExpandVolume.c" />
     <ClCompile Include="InitDataArea.c" />
     <ClCompile Include="WinMain.cpp">
@@ -388,6 +393,7 @@ copy $(TargetPath) "..\Debug\Setup Files\VeraCryptExpander-x64.exe" &gt;NUL:
     <ClInclude Include="..\Common\Dlgcode.h" />
     <ClInclude Include="..\Common\EncryptionThreadPool.h" />
     <ClInclude Include="..\Common\Exception.h" />
+    <ClInclude Include="ExpandVolumeApi.h" />
     <ClInclude Include="ExpandVolume.h" />
     <ClInclude Include="..\Common\GfMul.h" />
     <ClInclude Include="Hotkeys.h" />
@@ -432,6 +438,7 @@ copy $(TargetPath) "..\Debug\Setup Files\VeraCryptExpander-x64.exe" &gt;NUL:
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="ExpandVolumeApi.def" />
     <None Include="Logo_288dpi.bmp" />
     <None Include="Logo_96dpi.bmp" />
     <None Include="..\Common\Textual_logo_288dpi.bmp" />
@@ -443,7 +450,9 @@ copy $(TargetPath) "..\Debug\Setup Files\VeraCryptExpander-x64.exe" &gt;NUL:
     <None Include="..\Common\Language.xml" />
   </ItemGroup>
   <ItemGroup>
-    <Manifest Include="VeraCryptExpander.manifest" />
+    <Manifest Include="VeraCryptExpander.manifest">
+      <SubType>Designer</SubType>
+    </Manifest>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

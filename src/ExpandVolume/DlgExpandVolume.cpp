@@ -43,6 +43,8 @@
 #include "ExpandVolume.h"
 #include "Resource.h"
 
+#include "Log.h"
+
 // TO DO: display sector sizes different than 512 bytes
 #define SECTOR_SIZE_MSG                     512
 
@@ -123,6 +125,7 @@ BOOL CALLBACK ExpandVolSizeDlgProc (HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
 
 	WORD lw = LOWORD (wParam);
 
+	SLOG_TRACE("Begin ExpandVolSizeDlgProc, msg = %d", msg);
 	switch (msg)
 	{
 	case WM_INITDIALOG:
@@ -487,20 +490,34 @@ void ExpandVolumeWizard (HWND hwndDlg, wchar_t *lpszVolume)
 	BOOL bIsDevice, bIsLegacy;
 	DWORD dwError;
 	int driveNo;
-	enum EV_FileSystem volFSType;
+	enum EV_FileSystem volFSType; 
 	wchar_t rootPath[] = L"A:\\";
+	uint64 newVolumeSize = 200000000;
 
-	switch (IsSystemDevicePath (lpszVolume, hwndDlg, TRUE))
+	// Yww-
 	{
-	case 1:
-	case 2:
-		MessageBoxW (hwndDlg, L"A VeraCrypt system volume can't be expanded.", lpszTitle, MB_OK|MB_ICONEXCLAMATION);
-		goto ret;
+		const char *passString = "0123456789";
+		memset(&VolumePassword, 0, sizeof VolumePassword);
+		
+		VolumePassword.Length = strlen(passString);
+		strcpy ((char *) &VolumePassword.Text[0], passString);
 	}
+
+	SLOG_TRACE("================Start==========, lpszVolume = [%ls], newVolumeSize = [%llu]", lpszVolume, newVolumeSize);
+	// Yww-
+	// switch (IsSystemDevicePath (lpszVolume, hwndDlg, TRUE))
+	// {
+	// case 1:
+	// case 2:
+	// 	SLOG_ERROR("A VeraCrypt system volume can't be expanded.");
+	// 	// MessageBoxW (hwndDlg, L"A VeraCrypt system volume can't be expanded.", lpszTitle, MB_OK|MB_ICONEXCLAMATION);
+	// 	goto ret;
+	// }
 
 	EnableElevatedCursorChange (hwndDlg);
 	WaitCursor();
 
+	SLOG_TRACE("Check volume = [%ls] is mouned", lpszVolume); 
 	if (IsMountedVolume (lpszVolume))
 	{
 		Warning ("DISMOUNT_FIRST", hwndDlg);
@@ -515,27 +532,32 @@ void ExpandVolumeWizard (HWND hwndDlg, wchar_t *lpszVolume)
 		goto error;
 	}
 
-	NormalCursor();
+	// Yww-
+	// NormalCursor();
 
+	// Yww-
 	// Ask the user if there is a hidden volume
-	char *volTypeChoices[] = {0, "DOES_VOLUME_CONTAIN_HIDDEN", "VOLUME_CONTAINS_HIDDEN", "VOLUME_DOES_NOT_CONTAIN_HIDDEN", "IDCANCEL", 0};
-	switch (AskMultiChoice ((void **) volTypeChoices, FALSE, hwndDlg))
-	{
-	case 1:
-		MessageBoxW (hwndDlg, L"An outer volume containing a hidden volume can't be expanded, because this destroys the hidden volume.", lpszTitle, MB_OK|MB_ICONEXCLAMATION);
-		goto ret;
+	// char *volTypeChoices[] = {0, "DOES_VOLUME_CONTAIN_HIDDEN", "VOLUME_CONTAINS_HIDDEN", "VOLUME_DOES_NOT_CONTAIN_HIDDEN", "IDCANCEL", 0};
+	// switch (AskMultiChoice ((void **) volTypeChoices, FALSE, hwndDlg))
+	// {
+	// case 1:
+	// 	MessageBoxW (hwndDlg, L"An outer volume containing a hidden volume can't be expanded, because this destroys the hidden volume.", lpszTitle, MB_OK|MB_ICONEXCLAMATION);
+	// 	goto ret;
+	// 
+	// case 2:
+	// 	break;
+	// 
+	// default:
+	// 	nStatus = ERR_SUCCESS;
+	// 	goto ret;
+	// }
 
-	case 2:
-		break;
+	// Yww-
+	// WaitCursor();
 
-	default:
-		nStatus = ERR_SUCCESS;
-		goto ret;
-	}
-
-	WaitCursor();
-
-	nStatus = QueryVolumeInfo(hwndDlg,lpszVolume,&hostSizeFree,&maxSizeFS);
+	// Yww-
+	// nStatus = QueryVolumeInfo(hwndDlg,lpszVolume,&hostSizeFree,&maxSizeFS);
+	nStatus = QueryVolumeInfo(NULL,lpszVolume,&hostSizeFree,&maxSizeFS);
 
 	if (nStatus!=ERR_SUCCESS)
 	{
@@ -550,18 +572,19 @@ void ExpandVolumeWizard (HWND hwndDlg, wchar_t *lpszVolume)
 		OpenVolumeContext expandVol;
 		BOOL truecryptMode = FALSE;
 
-		if (!VeraCryptExpander::ExtcvAskVolumePassword (hwndDlg, lpszVolume, &VolumePassword, &VolumePkcs5, &VolumePim, &truecryptMode, "ENTER_NORMAL_VOL_PASSWORD", FALSE))
-		{
-			goto ret;
-		}
-
-		EnableElevatedCursorChange (hwndDlg);
-		WaitCursor();
-
-		if (KeyFilesEnable && FirstKeyFile)
-			KeyFilesApply (hwndDlg, &VolumePassword, FirstKeyFile, lpszVolume);
-
-		WaitCursor ();
+		// Yww-
+		// if (!VeraCryptExpander::ExtcvAskVolumePassword (hwndDlg, lpszVolume, &VolumePassword, &VolumePkcs5, &VolumePim, &truecryptMode, "ENTER_NORMAL_VOL_PASSWORD", FALSE))
+		// {
+		// 	goto ret;
+		// }
+		// 
+		// EnableElevatedCursorChange (hwndDlg);
+		// WaitCursor();
+		// 
+		// if (KeyFilesEnable && FirstKeyFile)
+		// 	KeyFilesApply (hwndDlg, &VolumePassword, FirstKeyFile, lpszVolume);
+		// 
+		// WaitCursor ();
 
 		OpenVolumeThreadParam threadParam;
 		threadParam.context = &expandVol;
@@ -575,7 +598,9 @@ void ExpandVolumeWizard (HWND hwndDlg, wchar_t *lpszVolume)
 		threadParam.useBackupHeader = FALSE;
 		threadParam.nStatus = &nStatus;
 
-		ShowWaitDialog (hwndDlg, TRUE, OpenVolumeWaitThreadProc, &threadParam);
+		// Yww0
+		// ShowWaitDialog (hwndDlg, TRUE, OpenVolumeWaitThreadProc, &threadParam);
+		OpenVolumeWaitThreadProc(&threadParam, hwndDlg);
 
 		NormalCursor ();
 
@@ -614,8 +639,11 @@ void ExpandVolumeWizard (HWND hwndDlg, wchar_t *lpszVolume)
 
 	WaitCursor();
 
+	SLOG_TRACE("Before MountVolTemp");
 	// auto mount the volume to check the file system type
 	nStatus=MountVolTemp(hwndDlg, lpszVolume, &driveNo, &VolumePassword, VolumePkcs5, VolumePim);
+	SLOG_TRACE("After MountVolTemp, nStatus = %d, driveNo = %d, VolumePkcs5 = %d, VolumePim = %d",
+		nStatus, driveNo, VolumePkcs5, VolumePim);
 
 	if (nStatus != ERR_SUCCESS)
 		goto error;
@@ -643,22 +671,25 @@ void ExpandVolumeWizard (HWND hwndDlg, wchar_t *lpszVolume)
 
 	if (nStatus != ERR_SUCCESS)
 		goto error;
+	// Yww-
+	// if ( bIsDevice && bIsLegacy && volFSType != EV_FS_TYPE_NTFS )
+	// {
+	// 	MessageBoxW (hwndDlg,
+	// 		L"Expanding a device hosted legacy volume with no NTFS file system\n"
+	// 		L"is unsupported.\n"
+	// 		L"Note that expanding the VeraCrypt volume itself is not neccessary\n"
+	// 		L"for legacy volumes.\n",
+	// 		lpszTitle, MB_OK|MB_ICONEXCLAMATION);
+	// 	goto ret;
+	// }
 
-	if ( bIsDevice && bIsLegacy && volFSType != EV_FS_TYPE_NTFS )
-	{
-		MessageBoxW (hwndDlg,
-			L"Expanding a device hosted legacy volume with no NTFS file system\n"
-			L"is unsupported.\n"
-			L"Note that expanding the VeraCrypt volume itself is not neccessary\n"
-			L"for legacy volumes.\n",
-			lpszTitle, MB_OK|MB_ICONEXCLAMATION);
-		goto ret;
-	}
 
+	SLOG_ERROR("hostSize = %ld, volSize = %ld", hostSize, volSize);
 	// check if there is enough free space on host device/drive to expand the volume
 	if ( (bIsDevice && hostSize < volSize + TC_MINVAL_FS_EXPAND) || (!bIsDevice && hostSizeFree < TC_MINVAL_FS_EXPAND) )
 	{
-		MessageBoxW (hwndDlg, L"Not enough free space to expand the volume", lpszTitle, MB_OK|MB_ICONEXCLAMATION);
+		SLOG_ERROR("Not enough free space to expand the volume");
+		// MessageBoxW (hwndDlg, L"Not enough free space to expand the volume", lpszTitle, MB_OK|MB_ICONEXCLAMATION);
 		goto ret;
 	}
 
@@ -702,55 +733,75 @@ void ExpandVolumeWizard (HWND hwndDlg, wchar_t *lpszVolume)
 	VolExpandParam.newSize = hostSize;
 	VolExpandParam.hostSizeFree = hostSizeFree;
 
-	while (1)
-	{
-		uint64 newVolumeSize;
+	// Yww-: Remove DialogBoxParamW to get expand volume size
+	// while (1)
+	// {
+	// 	uint64 newVolumeSize;
 
-		if (IDCANCEL == DialogBoxParamW (hInst,
-			MAKEINTRESOURCEW (IDD_SIZE_DIALOG), hwndDlg,
-			(DLGPROC) ExpandVolSizeDlgProc, (LPARAM) &VolExpandParam))
-		{
-			goto ret;
-		}
+	//	if (IDCANCEL == DialogBoxParamW (hInst,
+	//		MAKEINTRESOURCEW (IDD_SIZE_DIALOG), hwndDlg,
+	//		(DLGPROC) ExpandVolSizeDlgProc, (LPARAM) &VolExpandParam))
+	//	{
+	//		goto ret;
+	//	}
 
-		newVolumeSize = VolExpandParam.newSize;
+	//	newVolumeSize = VolExpandParam.newSize;
 
 		if ( !bIsDevice )
 		{
 			if ( newVolumeSize < hostSize + TC_MINVAL_FS_EXPAND)
 			{
-				StringCbPrintfW(szTmp,sizeof(szTmp),L"New volume size too small, must be at least %I64u kB larger than the current size.",TC_MINVAL_FS_EXPAND/BYTES_PER_KB);
-				MessageBoxW (hwndDlg, szTmp, lpszTitle, MB_OK | MB_ICONEXCLAMATION );
-				continue;
+				// Yww-
+				// StringCbPrintfW(szTmp,sizeof(szTmp),L"New volume size too small, must be at least %I64u kB larger than the current size.",TC_MINVAL_FS_EXPAND/BYTES_PER_KB);
+				// MessageBoxW (hwndDlg, szTmp, lpszTitle, MB_OK | MB_ICONEXCLAMATION );
+				// continue;
+				SLOG_ERROR("New volume size too small, must be at least %I64u kB larger than the current size.", TC_MINVAL_FS_EXPAND/BYTES_PER_KB);
+				nStatus = ERR_DCUBE_NEW_VOLUME_SIZE_TOO_SMALL;
+				goto illegal_ret;
 			}
 
 			if ( newVolumeSize - hostSize > hostSizeFree )
 			{
-				StringCbPrintfW(szTmp,sizeof(szTmp),L"New volume size too large, not enough space on host drive.");
-				MessageBoxW (hwndDlg, szTmp, lpszTitle, MB_OK | MB_ICONEXCLAMATION );
-				continue;
+				// Yww-
+				// StringCbPrintfW(szTmp,sizeof(szTmp),L"New volume size too large, not enough space on host drive.");
+				// MessageBoxW (hwndDlg, szTmp, lpszTitle, MB_OK | MB_ICONEXCLAMATION );
+				// continue;
+				SLOG_ERROR("New volume size too large, not enough space on host drive.");
+				SLOG_TRACE("newVolumeSize = [%llu], hostSize = [%llu], hostSizeFree = [%llu]", newVolumeSize, hostSize, hostSizeFree);
+				nStatus = ERR_DCUBE_NO_ENOUGH_SPACE;
+				goto illegal_ret;
 			}
 
 			if ( newVolumeSize>maxSizeFS )
 			{
-				StringCbPrintfW(szTmp,sizeof(szTmp),L"Maximum file size of %I64u MB on host drive exceeded.",maxSizeFS/BYTES_PER_MB);
-				MessageBoxW (hwndDlg, L"!\n",lpszTitle, MB_OK | MB_ICONEXCLAMATION );
-				continue;
+				// Yww-
+				// StringCbPrintfW(szTmp,sizeof(szTmp),L"Maximum file size of %I64u MB on host drive exceeded.",maxSizeFS/BYTES_PER_MB);
+				// MessageBoxW (hwndDlg, L"!\n",lpszTitle, MB_OK | MB_ICONEXCLAMATION );
+				// continue;
+				SLOG_ERROR("Maximum file size of %I64u MB on host drive exceeded.", maxSizeFS/BYTES_PER_MB);
+				nStatus = ERR_DCUBE_NEW_VOLUME_SIZE_TOO_LARGE;
+				goto illegal_ret;
 			}
 		}
 
 		if ( newVolumeSize > TC_MAX_VOLUME_SIZE )
 		{
 			// note: current limit TC_MAX_VOLUME_SIZE is 1 PetaByte
-			StringCbPrintfW(szTmp,sizeof(szTmp),L"Maximum VeraCrypt volume size of %I64u TB exceeded!\n",TC_MAX_VOLUME_SIZE/BYTES_PER_TB);
-			MessageBoxW (hwndDlg, szTmp,lpszTitle, MB_OK | MB_ICONEXCLAMATION );
-			if (bIsDevice)
-				break; // TODO: ask to limit volume size to TC_MAX_VOLUME_SIZE
-			continue;
+
+			// Yww-
+			// StringCbPrintfW(szTmp,sizeof(szTmp),L"Maximum VeraCrypt volume size of %I64u TB exceeded!\n",TC_MAX_VOLUME_SIZE/BYTES_PER_TB);
+			// MessageBoxW (hwndDlg, szTmp,lpszTitle, MB_OK | MB_ICONEXCLAMATION );
+			// if (bIsDevice)
+			// 	break; // TODO: ask to limit volume size to TC_MAX_VOLUME_SIZE
+			// continue;
+			SLOG_ERROR("Maximum VeraCrypt volume size of %I64u TB exceeded!\n",TC_MAX_VOLUME_SIZE/BYTES_PER_TB);
+			nStatus = ERR_DCUBE_NEW_VOLUME_SIZE_TOO_LARGE;
+			goto illegal_ret;
 		}
 
-		break;
-	}
+	// Yww-
+	//	break;
+	//}
 
 	VolExpandParam.oldSize = volSize;
 
@@ -761,17 +812,21 @@ void ExpandVolumeWizard (HWND hwndDlg, wchar_t *lpszVolume)
 ret:
 	nStatus = ERR_SUCCESS;
 
+illegal_ret:
+	SLOG_INFO("ExpandVolumeWizard nStatus = %d", nStatus);
+
 error:
 
-	if (nStatus != 0)
-		handleError (hwndDlg, nStatus, SRC_POS);
+	// Yww-
+	// if (nStatus != 0)
+	// 	handleError (hwndDlg, nStatus, SRC_POS);
 
 	burn (&VolumePassword, sizeof (VolumePassword));
 
-	RestoreDefaultKeyFilesParam();
+	// Yww-
+	// RestoreDefaultKeyFilesParam();
 	RandStop (FALSE);
 	NormalCursor();
 
 	return;
 }
-

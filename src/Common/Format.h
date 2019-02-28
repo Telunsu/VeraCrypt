@@ -73,6 +73,8 @@ FORMAT_VOL_PARAMETERS;
 
 extern int FormatWriteBufferSize;
 
+void SetFormatSectorSize (uint32 sector_size);
+
 int TCFormatVolume (volatile FORMAT_VOL_PARAMETERS *volParams);
 BOOL FormatNtfs (int driveNo, int clusterSize);
 BOOL FormatFs (int driveNo, int clusterSize, int fsType);
@@ -80,8 +82,8 @@ uint64 GetVolumeDataAreaSize (BOOL hiddenVolume, uint64 volumeSize);
 int FormatNoFs (HWND hwndDlg, unsigned __int64 startSector, __int64 num_sectors, void *dev, PCRYPTO_INFO cryptoInfo, BOOL quickFormat);
 BOOL WriteSector ( void *dev , char *sector , char *write_buf , int *write_buf_cnt , __int64 *nSecNo , PCRYPTO_INFO cryptoInfo );
 BOOL FlushFormatWriteBuffer (void *dev, char *write_buf, int *write_buf_cnt, __int64 *nSecNo, PCRYPTO_INFO cryptoInfo);
-static BOOL StartFormatWriteThread ();
-static void StopFormatWriteThread ();
+BOOL StartFormatWriteThread ();
+void StopFormatWriteThread ();
 
 // Creates a volume header in memory
 #if defined(_UEFI)

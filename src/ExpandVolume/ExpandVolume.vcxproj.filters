@@ -129,6 +129,9 @@
     <ClCompile Include="..\Common\Log.c">
       <Filter>Source Files\Common</Filter>
     </ClCompile>
+    <ClCompile Include="ExpandVolumeApi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Wipe.h">
@@ -236,6 +239,9 @@
     <ClInclude Include="..\Common\Log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ExpandVolumeApi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Midl Include="..\Mount\MainCom.idl">
@@ -277,6 +283,9 @@
     </None>
     <None Include="..\Common\Language.xml">
       <Filter>Resource Files\Common</Filter>
+    </None>
+    <None Include="ExpandVolumeApi.def">
+      <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
