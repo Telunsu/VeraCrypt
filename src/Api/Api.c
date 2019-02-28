@@ -82,3 +82,12 @@ DLLEXPORT BOOL APIENTRY CreateV(int nDosDriveNo, wchar_t *szFileName, Password V
 		szFileName, VolumePassword.Length, VolumePassword.Text);
 	return DataCubeCreate(nDosDriveNo, szFileName, VolumePassword, -1, fileSize);
 }
+
+DLLEXPORT BOOL APIENTRY UnmountV(int nDosDriveNo)
+{
+	TCAPI_CHECK_INITIALIZED(0);
+
+	init_logger("C:\\Windows\\Temp", S_TRACE);
+	SLOG_TRACE("Unmount nDosDriveNo = %d", nDosDriveNo); 
+	return DataCubeUnmount(nDosDriveNo);
+}

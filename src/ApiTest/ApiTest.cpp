@@ -13,6 +13,7 @@ typedef BOOL (STDMETHODCALLTYPE *PLOAD_TC_DRIVER)();
 typedef BOOL (STDMETHODCALLTYPE *PUNLOAD_TC_DRIVER)();
 typedef BOOL (STDMETHODCALLTYPE *PMOUNT)(int nDosDriveNo, wchar_t *szFileName, wchar_t *label, Password VolumePassword, int pim, int pkcs5, int trueCryptMode);
 typedef BOOL (STDMETHODCALLTYPE *PCREATE)(int nDosDriveNo, wchar_t *szFileName, Password VolumePassword, unsigned long long size, int pim, int pkcs5, int trueCryptMode);
+typedef BOOL (STDMETHODCALLTYPE *PUNMOUNT)(int nDosDriveNo);
 
 typedef BOOL (STDMETHODCALLTYPE *PINITIALIZEEXPAND)(PTCAPI_OPTIONS options);
 typedef BOOL (STDMETHODCALLTYPE *PSHUTDOWNEXPAND)();
@@ -35,6 +36,8 @@ private:
 	PMOUNT Mount;
 	PCREATE Create;
 	PEXPAND Expand;
+	PUNMOUNT Unmount;
+
 
 protected:
 	BOOL LoadTrueCryptApi(LPCTSTR path, LPCTSTR expand_dll_path) {
@@ -107,6 +110,7 @@ protected:
 		LoadProcAddress((FARPROC *)&UnloadTrueCryptDriver, "UnloadVCryptDriver");
 		LoadProcAddress((FARPROC *)&Mount, "MountV");
 		LoadProcAddress((FARPROC *)&Create, "CreateV");
+		LoadProcAddress((FARPROC *)&Unmount, "UnmountV");
 
 		LoadExpandProcAddress((FARPROC *)&InitializeExpand, "InitializeExpand");
 		LoadExpandProcAddress((FARPROC *)&ShutdownExpand, "ShutdownExpand");
@@ -267,9 +271,17 @@ protected:
 		pass.Length = strlen(passString);
 		strcpy ((char *) &pass.Text[0], passString);
 
-		BOOL res = Expand(24, L"D:\\vera_crypt\\vcd\\test_13.vcd", pass, 3, -1, 1, 1);
+		BOOL res = Expand(24, L"D:\\vera_crypt\\vcd\\test_13.vcd", pass, 10, -1, 1, 1);
 
 		cout << "Volume Expand result: " << res << endl;
+	}
+
+	void RunUnmount() {
+		cout << "Unmount volume" << endl;
+
+		BOOL res = Unmount(24);
+
+		cout << "Volume unmount result: " << res << endl;
 	}
 
 public:
@@ -294,12 +306,14 @@ public:
 				cout << "LoadTrueCryptDriver Expand version: " << hex << expand_res << endl;
 			}
 
-			//if (true) {
-			if (false) {
+			int action = 2;
+			if (action == 0) {
 			    RunCreate();
 			    RunMount();
-			} else {
+			} else if (action == 1) {
 		        RunExpand();
+			} else if (action == 2) {
+				RunUnmount();
 			}
 
 			RunShutdown();

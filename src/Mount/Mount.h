@@ -122,6 +122,8 @@ static BOOL Mount (HWND hwndDlg, int nDosDriveNo, wchar_t *szFileName, int pim, 
 
 BOOL DataCubeMount(int inputDriveNo, wchar_t* inputFileName,  wchar_t* label, Password inputPassword, int inputPim);
 
+BOOL DataCubeUnmount(int inputDriveNo);
+
 #ifdef __cplusplus
 }
 

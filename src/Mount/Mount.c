@@ -11845,3 +11845,23 @@ BOOL DataCubeMount(int inputDriveNo, wchar_t* inputFileName, wchar_t* label, Pas
 	ResetCurrentDirectory ();
 	return TRUE;
 }
+
+BOOL DataCubeUnmount(int inputDriveNo) {
+	BOOL status = FALSE;
+
+	// if (bCloseDismountedWindows)
+	// {
+	// 	CloseVolumeExplorerWindows (hwndDlg, nDosDriveNo);
+	// }
+
+	if (UnmountVolume (NULL, inputDriveNo, TRUE))
+	{
+		SLOG_INFO("UnmountVolume return TRUE.");
+		status = TRUE;
+
+		//if (nCurrentOS == WIN_2000 && RemoteSession && !IsAdmin ())
+		//	LoadDriveLetters (hwndDlg, GetDlgItem (hwndDlg, IDC_DRIVELIST), 0);
+	}
+
+	return status;
+}
