@@ -10737,8 +10737,9 @@ BOOL CreateInternal(int inputDriveNo,
 /* Except in response to the WM_INITDIALOG and WM_ENDSESSION messages, the dialog box procedure
    should return nonzero if it processes the message, and zero if it does not. - see DialogProc */
 BOOL DataCubeCreate(int inputDriveNo, wchar_t* inputFileName, // wchar_t* label, 
-	Password inputPassword, int inputPim, unsigned long long fileSize)
+	Password inputPassword, int inputPim, unsigned long long fileSize_in_GB)
 {
+	unsigned long long fileSize = fileSize_in_GB * 1024 * 1024 * 1024;
 	int status;
 	Password dc_volumePassword;
 	char dc_szVerify[MAX_PASSWORD + 1];

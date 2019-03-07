@@ -241,7 +241,7 @@ protected:
 
 		cout << "Mounting volume" << endl;
 
-		BOOL res = Mount(24, L"D:\\vera_crypt\\vcd\\test_13.vcd", L"YWW", pass, -1, 0, 1);
+		BOOL res = Mount(24, L"D:\\vera_crypt\\vcd\\test_15.vcd", L"YWW", pass, -1, 0, 1);
 
 		cout << "Volume mount result: " << res << endl;
 	}
@@ -256,7 +256,7 @@ protected:
 
 		cout << "Create volume" << endl;
 
-		BOOL res = Create(24, L"D:\\vera_crypt\\vcd\\test_13.vcd", pass, 512 * 1024 * 1024, -1, 0, 1);
+		BOOL res = Create(24, L"D:\\vera_crypt\\vcd\\test_15.vcd", pass, 1, -1, 0, 1);
 
 		cout << "Volume Create result: " << res << endl;
 	}
@@ -271,7 +271,7 @@ protected:
 		pass.Length = strlen(passString);
 		strcpy ((char *) &pass.Text[0], passString);
 
-		BOOL res = Expand(24, L"D:\\vera_crypt\\vcd\\test_13.vcd", pass, 10, -1, 1, 1);
+		BOOL res = Expand(24, L"D:\\vera_crypt\\vcd\\test_15.vcd", pass, 2, -1, 1, 1);
 
 		cout << "Volume Expand result: " << res << endl;
 	}
@@ -306,7 +306,7 @@ public:
 				cout << "LoadTrueCryptDriver Expand version: " << hex << expand_res << endl;
 			}
 
-			int action = 2;
+			int action = 1;
 			if (action == 0) {
 			    RunCreate();
 			    RunMount();

@@ -4762,11 +4762,13 @@ int DriverAttach (void)
 start:
 
 #endif
-
+	SLOG_INFO("Driver Attach");
 	hDriver = CreateFile (WIN32_ROOT_PREFIX, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
 	if (hDriver == INVALID_HANDLE_VALUE)
 	{
+		SLOG_INFO("CreateFile to open driver failed, try to start it.");
+
 #ifndef SETUP
 
 		LoadSysEncSettings ();
@@ -4777,6 +4779,8 @@ start:
 
 			while (!CreateDriverSetupMutex ())
 			{
+				SLOG_TRACE("Waiting other instance finishes.");
+
 				Sleep (100);	// Wait until the other instance finishes
 			}
 
@@ -4785,6 +4789,8 @@ start:
 		}
 		else
 		{
+			SLOG_INFO("No other instance is currently attempting to install, register or start the driver.");
+
 			// No other instance is currently attempting to install, register or start the driver
 
 			if (SystemEncryptionStatus != SYSENC_STATUS_NONE)
@@ -4806,7 +4812,7 @@ start:
 					}
 					catch (Exception &e)
 					{
-						e.Show (NULL);
+						SLOG_ERROR("RegisterBootDriver throw exception.");
 					}
 				}
 
@@ -4817,11 +4823,15 @@ start:
 				// Attempt to load the driver (non-install/portable mode)
 load:
 				BOOL res = DriverLoad ();
+				SLOG_TRACE("DriverLoad over");
+
 
 				CloseDriverSetupMutex ();
 
-				if (res != ERROR_SUCCESS)
+				if (res != ERROR_SUCCESS) {
+					SLOG_TRACE("DriverLoad failed");
 					return res;
+				}
 
 				bPortableModeConfirmed = TRUE;
 			
@@ -4838,17 +4848,22 @@ load:
 #endif	// #ifndef SETUP
 
 		if (hDriver == INVALID_HANDLE_VALUE) {
+			SLOG_TRACE("hDriver is INVALID_HANDLE_VALUE");
+
 			return ERR_OS_ERROR;
 		}
 	}
 
 	CloseDriverSetupMutex ();
+	SLOG_TRACE("CloseDriverSetupMutex");
 
 	if (hDriver != INVALID_HANDLE_VALUE)
 	{
 		DWORD dwResult;
 
 		BOOL bResult = DeviceIoControl (hDriver, TC_IOCTL_GET_DRIVER_VERSION, NULL, 0, &DriverVersion, sizeof (DriverVersion), &dwResult, NULL);
+
+		SLOG_INFO("DeviceIoControl to get driver version");
 
 		if (!bResult) {
 
@@ -4880,6 +4895,7 @@ load:
 #endif
 	}
 
+	SLOG_INFO("DriverAttach return 0");
 	return 0;
 }
 

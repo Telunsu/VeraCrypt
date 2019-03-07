@@ -233,6 +233,10 @@ void write_log(slog_level level, int print_stacktrace, const char *func_name, in
         return;
     }
 
+	if (g_logger_cfg.log_file == NULL) {
+		return;
+	}
+
     va_start(args, fmt);
     vsnprintf(log_content, sizeof(log_content) - 1, fmt, args);
     va_end(args);

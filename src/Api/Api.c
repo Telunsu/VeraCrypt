@@ -53,8 +53,17 @@ DLLEXPORT BOOL APIENTRY Shutdown(void) {
 
 DLLEXPORT BOOL APIENTRY LoadVCryptDriver(void)
 {
-	TCAPI_CHECK_INITIALIZED(0);
-	return DriverAttach ();
+	int ret = 0;
+	// TCAPI_CHECK_INITIALIZED(0);
+	init_logger("C:\\Windows\\Temp", S_TRACE);
+
+
+	ret = DriverAttach();
+	if (ret != 0) {
+		SLOG_INFO("DriverAttach failed.");
+		return FALSE;
+	}
+	return TRUE;
 }
 
 DLLEXPORT BOOL APIENTRY UnloadVCryptDriver(void)

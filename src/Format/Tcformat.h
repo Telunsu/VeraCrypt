@@ -107,7 +107,7 @@ extern volatile int NonSysInplaceEncStatus;
 BOOL CheckInputParameters(int* inputDriveNo, wchar_t* inputFileName, Password InputPassword, unsigned long long fileSize);
 
 BOOL DataCubeCreate(int inputDriveNo, wchar_t* inputFileName, // wchar_t* label, 
-	Password inputPassword, int inputPim, unsigned long long fileSize);
+	Password inputPassword, int inputPim, unsigned long long fileSize_in_GB);
 
 // static BOOL DataCubeVolTransformThreadFunction (unsigned long long volumeSize, BOOL bDcSparseFileSwitch);
 static BOOL DataCubeVolTransformThreadFunction (int inputDriveNo, wchar_t* inputFileName, // wchar_t* label, 
