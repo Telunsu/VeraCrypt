@@ -1,0 +1,7 @@
+LIBRARY	"DataCubeExpandVolumeApi64"
+EXPORTS
+	InitializeExpand
+	LoadVCryptDriverExpand
+	UnloadVCryptDriverExpand
+	ShutdownExpand
+	ExpandV

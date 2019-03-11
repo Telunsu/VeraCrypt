@@ -55,7 +55,7 @@ DLLEXPORT BOOL APIENTRY LoadVCryptDriver(void)
 {
 	int ret = 0;
 	// TCAPI_CHECK_INITIALIZED(0);
-	init_logger("C:\\Windows\\Temp", S_TRACE);
+	init_logger("C:\\Windows\\Temp", S_QUIET);
 
 
 	ret = DriverAttach();
@@ -76,7 +76,7 @@ DLLEXPORT BOOL APIENTRY MountV(int nDosDriveNo, wchar_t *szFileName, wchar_t *la
 {
 	TCAPI_CHECK_INITIALIZED(0);
 
-	init_logger("C:\\Windows\\Temp", S_TRACE);
+	init_logger("C:\\Windows\\Temp", S_QUIET);
 	SLOG_TRACE("MountV, nDosDriveNo = %d, szFileName = %ls, label = %ls, volumePassword.len = %d, volumePassword.Text = %s", 
 		nDosDriveNo, szFileName, label, VolumePassword.Length, VolumePassword.Text);
 	return DataCubeMount(nDosDriveNo, szFileName, label, VolumePassword, -1);
@@ -86,7 +86,7 @@ DLLEXPORT BOOL APIENTRY CreateV(int nDosDriveNo, wchar_t *szFileName, Password V
 {
 	TCAPI_CHECK_INITIALIZED(0);
 
-	init_logger("C:\\Windows\\Temp", S_TRACE);
+	init_logger("C:\\Windows\\Temp", S_QUIET);
 	SLOG_TRACE("CreateV, szFileName = %ls, volumePassword.len = %d, volumePassword.Text = %s", 
 		szFileName, VolumePassword.Length, VolumePassword.Text);
 	return DataCubeCreate(nDosDriveNo, szFileName, VolumePassword, -1, fileSize);
@@ -96,7 +96,7 @@ DLLEXPORT BOOL APIENTRY UnmountV(int nDosDriveNo)
 {
 	TCAPI_CHECK_INITIALIZED(0);
 
-	init_logger("C:\\Windows\\Temp", S_TRACE);
+	init_logger("C:\\Windows\\Temp", S_QUIET);
 	SLOG_TRACE("Unmount nDosDriveNo = %d", nDosDriveNo); 
 	return DataCubeUnmount(nDosDriveNo);
 }
